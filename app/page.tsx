@@ -1,33 +1,49 @@
 import Image from 'next/image';
+import ButtonComponent from './components/buttoncomponent';
 
 export default function Home() {
   return (
-    <div className="flex flex-col items-center" >
-      <div className="my-4">
-        <Image
-          src="/holychildlogo.png"
-          alt="Example Image"
-          width={200}
-          height={200}
-        />
-      </div>
-      <div className="text-center my-4 text-[#835048] font-PlayfairDisplay">
-        <div className="text-4xl md:text-6xl text-center font-semibold tracking-tight leading-tight">
-          Create Lasting Memories
+    <main className="min-h-screen flex items-center justify-center bg-white">
+      <div className="w-full max-w-sm flex flex-col items-center text-center space-y-8 py-12">
+        {/* Logo */}
+        <div className="mt-10">
+          <Image
+            src="/holychildlogo.png"
+            alt="Holy Child College logo"
+            width={140}
+            height={140}
+            priority
+          />
         </div>
-        <div className="text-base md:text-lg mt-1">
-          with
-          </div>
-        <div className="text-base md:text-lg">
-          Custom Frames
-          </div>
-      </div>
-      <div>
 
-      </div>
-      <div>
+        {/* Headline */}
+        <h1 className="mt-6 text-[#7A3B33] font-serif text-3xl md:text-4xl leading-tight">
+          <span className="block">Create Lasting Memories</span>
+          <span className="block mt-1 text-2xl">with</span>
+          <span className="block mt-1 text-2xl">Custom Frames</span>
+        </h1>
 
+        {/* Description */}
+        <p className="mt-4 text-sm md:text-base text-gray-700 px-4">
+          Design unique frames for Holy Child College of Education&apos;s 80th Anniversary. Preserve your cherished moments in style and honor a legacy.
+        </p>
+
+        {/* Poster / framed image placeholder */}
+        <div className="w-56 md:w-64 bg-[#6a3f36] p-4 rounded-sm shadow-lg">
+          <div className="bg-white rounded-sm p-2 flex items-center justify-center">
+            <Image
+              src="/poster.svg"
+              alt="Sample framed poster"
+              width={220}
+              height={220}
+              className="object-cover"
+            />
+          </div>
+        </div>
+        <div className="w-full flex justify-center">
+          <ButtonComponent href="/uploadpic" />
+        </div>
       </div>
-    </div>
+    </main>
   );
 }

@@ -1,19 +1,25 @@
-@import "tailwindcss/preflight";
-@tailwind utilities;
+@import "tailwindcss";
 
-/* Global styles */
-html, body {
-	height: 100%;
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
 }
 
 body {
-	margin: 0;
-
-}
-
-/* Example: ensure Tailwind utility classes like flex/text-4xl work immediately */
-
-/* Playfair Display helper class (uses CSS variable set by next/font/google in layout.tsx) */
-.font-PlayfairDisplay {
-	font-family: var(--font-playfair);
+  background:#ffffff;
+  font-family: Arial, Helvetica, sans-serif;
 }
