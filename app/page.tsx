@@ -41,7 +41,7 @@ export default function Home() {
           </div>
         </div>
         <div className="w-full flex justify-center">
-          <ButtonComponent href="/uploadpic" />
+          <ButtonComponent href="/uploadpic" label="Start Framing"/>
         </div>
       </div>
     </main>

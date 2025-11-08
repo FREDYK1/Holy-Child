@@ -34,8 +34,6 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${playfair.variable} antialiased`}
       >
-        {/* Diagnostic banner: visible across all pages to confirm server rendering */}
-        <div style={{background: '#f87171', color: 'white', padding: '6px 12px', textAlign: 'center', fontWeight: 600}}>DIAGNOSTIC: app/layout is rendering — remove after debugging</div>
         {children}
       </body>
     </html>
