@@ -6,7 +6,7 @@ export default function Home() {
     <main className="min-h-screen flex items-center justify-center bg-white">
       <div className="w-full max-w-sm flex flex-col items-center text-center space-y-8 py-12">
         {/* Logo */}
-        <div className="mt-10">
+        <div className="mt-5">
           <Image
             src="/holychildlogo.png"
             alt="Holy Child College logo"

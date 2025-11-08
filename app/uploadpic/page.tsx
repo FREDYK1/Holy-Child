@@ -4,6 +4,8 @@ import React, { useRef, useState } from 'react';
 import Link from 'next/link';
 import Header from '../components/Header';
 
+const STORAGE_KEY = 'hc_upload';
+
 export default function UploadPhotoPage() {
   const [preview, setPreview] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -11,8 +13,14 @@ export default function UploadPhotoPage() {
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    const url = URL.createObjectURL(file);
-    setPreview(url);
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      // persist as data URL so other pages can access it
+  try { localStorage.setItem(STORAGE_KEY, result); } catch { /* ignore */ }
+      setPreview(result);
+    };
+    reader.readAsDataURL(file);
   }
 
   function handleAreaClick() {
