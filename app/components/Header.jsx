@@ -8,7 +8,7 @@ const Header = ({ label = 'Upload Photo', href = '/' }) => {
       <div className="max-w-3xl mx-auto px-4">
         <div className="relative flex items-center justify-center">
           <Link href={href} className="absolute left-0 inline-flex items-center justify-center w-10 h-10 rounded-full bg-black text-white">
-            <Image src="/backbutton.svg" alt="Back" width={20} height={20} />
+            <Image src="/image.png" alt="Back" width={20} height={20} className="bg-white"/>
           </Link>
 
           <h1 className="text-lg font-semibold text-white">{label}</h1>
