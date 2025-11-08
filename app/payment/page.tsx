@@ -4,7 +4,8 @@ import React, { useState, useMemo } from 'react';
 import Header from '../components/Header';
 import { useRouter } from 'next/navigation';
 
-type Order = { frameId: string; upload?: string | null } | null;
+type Transform = { scale: number; offset: { x: number; y: number }; displayedW: number; displayedH: number; baseScale: number; containerW?: number; containerH?: number };
+type Order = { frameId: string; upload?: string | null; originalUpload?: string | null; transform?: Transform; compositeImage?: string } | null;
 
 export default function PaymentPage() {
   const [fullName, setFullName] = useState('');
@@ -21,7 +22,7 @@ export default function PaymentPage() {
   }, []);
   const router = useRouter();
 
-  async function createComposite(frameSrc: string, uploadData?: string | null) {
+  async function createComposite(frameSrc: string, uploadData?: string | null, transform?: { scale: number; offset: { x: number; y: number }; displayedW: number; displayedH: number; baseScale: number; containerW?: number; containerH?: number } | null) {
     // create a canvas and draw upload then frame overlay
     const canvas = document.createElement('canvas');
     const width = 1200;
@@ -44,13 +45,28 @@ export default function PaymentPage() {
         i.onerror = rej;
         i.src = uploadData;
       });
-      // cover the canvas
-      const ratio = Math.max(width / img.naturalWidth, height / img.naturalHeight);
-      const iw = img.naturalWidth * ratio;
-      const ih = img.naturalHeight * ratio;
-      const ix = (width - iw) / 2;
-      const iy = (height - ih) / 2;
-      ctx.drawImage(img, ix, iy, iw, ih);
+
+      if (transform && typeof transform.scale === 'number') {
+        // Use provided transform to position the image exactly like the preview
+        const { scale, offset, displayedW, displayedH, containerW = 300, containerH = 400 } = transform;
+        const canvasScaleX = width / containerW;
+        const canvasScaleY = height / containerH;
+        const dw = displayedW * scale * canvasScaleX;
+        const dh = displayedH * scale * canvasScaleY;
+        const centerX = width / 2 + offset.x * canvasScaleX;
+        const centerY = height / 2 + offset.y * canvasScaleY;
+        const ix = centerX - dw / 2;
+        const iy = centerY - dh / 2;
+        ctx.drawImage(img, ix, iy, dw, dh);
+      } else {
+        // cover the canvas
+        const ratio = Math.max(width / img.naturalWidth, height / img.naturalHeight);
+        const iw = img.naturalWidth * ratio;
+        const ih = img.naturalHeight * ratio;
+        const ix = (width - iw) / 2;
+        const iy = (height - ih) / 2;
+        ctx.drawImage(img, ix, iy, iw, ih);
+      }
     }
 
     // draw frame overlay
@@ -70,10 +86,39 @@ export default function PaymentPage() {
     e.preventDefault();
     // generate composite and store
     try {
-      const frameId = order?.frameId || 'frame-1';
-      const frame = frameId === 'frame-2' ? '/Selection (3) 1.svg' : '/poster.svg';
-      const composite = await createComposite(frame, order?.upload);
-      if (composite) localStorage.setItem('hc_final', composite);
+      // If the preview flow already generated a final composite, reuse it.
+      const existing = localStorage.getItem('hc_final');
+      if (existing) {
+        // ensure order contains compositeImage
+        try {
+          const raw = localStorage.getItem('hc_order');
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (!parsed.compositeImage) {
+              parsed.compositeImage = existing;
+              localStorage.setItem('hc_order', JSON.stringify(parsed));
+            }
+          }
+        } catch {}
+      } else {
+        const frameId = order?.frameId || 'frame-1';
+        // Use the same frame assets as the frames page
+        const frame = frameId === 'frame-2' ? '/pic2.svg' : '/pic1.svg';
+  const upload = order?.originalUpload ?? order?.upload ?? null;
+  const transform = order?.transform ?? null;
+        const composite = await createComposite(frame, upload, transform);
+        if (composite) {
+          localStorage.setItem('hc_final', composite);
+          try {
+            const raw = localStorage.getItem('hc_order');
+            if (raw) {
+              const parsed = JSON.parse(raw);
+              parsed.compositeImage = composite;
+              localStorage.setItem('hc_order', JSON.stringify(parsed));
+            }
+          } catch {}
+        }
+      }
     } catch {
       // ignore
     }

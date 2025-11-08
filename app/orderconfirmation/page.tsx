@@ -41,11 +41,15 @@ export default function OrderConfirmationPage() {
 			<main className="max-w-md mx-auto px-6 py-6 text-center">
 				<div className="w-full h-80 bg-gray-50 flex items-center justify-center mb-6">
 					{originalUpload && transform ? (
-						<div className="w-56 h-72 relative">
+						// Use exact pixel container dimensions from the saved transform so the
+						// positioning/scale matches the preview modal precisely.
+						<div className="relative" style={{ width: transform.containerW ?? 224, height: transform.containerH ?? 288 }}>
+							{/* frame background */}
 							<div className="absolute inset-0 z-0 pointer-events-none">
 								<Image src={selectedFrame.src} alt={selectedFrame.title} fill style={{ objectFit: 'cover' }} />
 							</div>
 
+							{/* positioned user image using saved transform */}
 							<div className="absolute inset-0 z-10 flex items-center justify-center">
 								{/* eslint-disable-next-line @next/next/no-img-element */}
 								<img
@@ -57,16 +61,16 @@ export default function OrderConfirmationPage() {
 										top: '50%',
 										transform: `translate(calc(-50% + ${transform.offset.x}px), calc(-50% + ${transform.offset.y}px)) scale(${transform.scale})`,
 										transformOrigin: 'center center',
-										width: selectedFrame.id === 'frame-1' ? '180px' : transform.displayedW || 'auto',
-										height: selectedFrame.id === 'frame-1' ? '180px' : transform.displayedH || 'auto',
+										width: transform.displayedW ? `${transform.displayedW}px` : 'auto',
+										height: transform.displayedH ? `${transform.displayedH}px` : 'auto',
 										borderRadius: selectedFrame.id === 'frame-1' ? '50%' : undefined,
-										objectFit: selectedFrame.id === 'frame-1' ? 'cover' : selectedFrame.id === 'frame-2' ? 'contain' : undefined,
+										objectFit: selectedFrame.id === 'frame-1' ? 'cover' : selectedFrame.id === 'frame-2' ? 'contain' : 'cover',
 										...(selectedFrame.id === 'frame-1' && {
 											maxWidth: '180px',
 											maxHeight: '180px',
 											aspectRatio: '1',
 										})
-									}}
+								}}
 								/>
 							</div>
 						</div>

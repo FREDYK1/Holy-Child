@@ -168,10 +168,12 @@ const InteractiveImage = forwardRef(function InteractiveImage(
                     transformOrigin: 'center center',
                     touchAction: 'none',
                     userSelect: 'none',
-                    width: isCircular ? '180px' : displayed.displayedW || 'auto', // Fixed size for circle
-                    height: isCircular ? '180px' : displayed.displayedH || 'auto', // Fixed size for circle
+                    // For non-circular containers, force the image element to match the interactive container
+                    // so the visible area is a rectangle of the requested width/height (preserves vertical rectangle for frame-2)
+                    width: isCircular ? '180px' : `${width}px`,
+                    height: isCircular ? '180px' : `${height}px`,
                     borderRadius: isCircular ? '50%' : undefined,
-                    objectFit: isCircular ? 'cover' : preserveAspectRatio ? 'contain' : undefined,
+                    objectFit: isCircular ? 'cover' : preserveAspectRatio ? 'contain' : 'cover',
                     ...(isCircular && {
                         maxWidth: '180px',
                         maxHeight: '180px',

@@ -3,6 +3,7 @@
 import React, { useRef, useState } from 'react';
 import Link from 'next/link';
 import Header from '../components/Header';
+import { Image } from 'next/image';
 
 const STORAGE_KEY = 'hc_upload';
 
@@ -59,7 +60,7 @@ export default function UploadPhotoPage() {
             {preview ? (
               // preview image
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={preview} alt="Uploaded portrait preview" className="absolute inset-0 w-full h-full object-cover opacity-95" />
+              <img src="/public/Selection (3) 1.svg" alt="Uploaded portrait preview" className="absolute inset-0 w-full h-full object-cover opacity-95" />
             ) : null}
 
             <div className="relative z-10 flex flex-col items-center text-center text-[#7A3B33]">
