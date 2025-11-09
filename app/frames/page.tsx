@@ -363,10 +363,10 @@ export default function FramesPage() {
                                             <InteractiveImage 
                                                 ref={interactiveRef} 
                                                 src={uploadData} 
-                                                width={current.id === 'frame-1' ? 200 : 224} // Adjusted width for circle
-                                                height={current.id === 'frame-1' ? 200 : 288} // Square dimensions for circle
+                                                width={current.id === 'frame-1' ? 200 : 200} // Adjusted width for circle
+                                                height={current.id === 'frame-1' ? 200 : 250} // Square dimensions for circle
                                                 isCircular={current.id === 'frame-1'}
-                                                preserveAspectRatio={current.id === 'frame-2'}
+                                                preserveAspectRatio={false}
                                             />
                                         </div>
                                     </>
