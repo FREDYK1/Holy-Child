@@ -213,27 +213,38 @@ export default function FramesPage() {
     ) {
         if (!uploadDataUrl) return null;
 
-        // canvas size — reduced for Vercel compatibility
-        const width = 800;
-        const height = 1000;
+        // canvas size — further reduced for Vercel compatibility
+        const width = 600;
+        const height = 750;
         const canvas = document.createElement('canvas');
         canvas.width = width;
         canvas.height = height;
         const ctx = canvas.getContext('2d');
         if (!ctx) return null;
 
-        // load images
+        // load frame image using fetch for better compatibility
+        const frameResponse = await fetch(frameSrc);
+        if (!frameResponse.ok) {
+            throw new Error(`Failed to fetch frame: ${frameResponse.status}`);
+        }
+        const frameBlob = await frameResponse.blob();
         const frameImg = await new Promise<HTMLImageElement>((res, rej) => {
             const i = new window.Image();
             i.onload = () => res(i);
-            i.onerror = rej;
-            i.src = frameSrc;
+            i.onerror = (e) => {
+                console.error('Frame image load error:', e);
+                rej(e);
+            };
+            i.src = URL.createObjectURL(frameBlob);
         });
 
         const userImg = await new Promise<HTMLImageElement>((res, rej) => {
             const i = new window.Image();
             i.onload = () => res(i);
-            i.onerror = rej;
+            i.onerror = (e) => {
+                console.error('User image load error:', e);
+                rej(e);
+            };
             i.src = uploadDataUrl;
         });
 
@@ -397,7 +408,7 @@ export default function FramesPage() {
                                     } catch (err) {
                                         console.error('Error creating final image:', err);
                                         setIsGenerating(false);
-                                        alert('An error occurred. Please try again.');
+                                        alert('An error occurred. Please try again. Error: ' + (err as Error).message);
                                     }
                                 }}
                                 className="px-6 py-2 bg-[#7C3F33] text-white rounded-full"
