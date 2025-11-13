@@ -40,14 +40,35 @@ export default function OrderConfirmationPage() {
 
 			<main className="max-w-md mx-auto px-6 py-6 text-center">
 				<div className="w-full h-80 bg-gray-50 flex items-center justify-center mb-6">
-					{orderData?.compositeImage ? (
-						<div className="w-56 h-72 relative flex items-center justify-center">
-							{/* eslint-disable-next-line @next/next/no-img-element */}
-							<img
-								src={orderData.compositeImage}
-								alt="Your Framed Photo"
-								className="max-w-full max-h-full object-contain"
-							/>
+					{originalUpload && transform ? (
+						<div className="w-56 h-72 relative">
+							<div className="absolute inset-0 z-0 pointer-events-none">
+								<Image src={selectedFrame.src} alt={selectedFrame.title} fill style={{ objectFit: 'cover' }} />
+							</div>
+
+							<div className="absolute inset-0 z-10 flex items-center justify-center">
+								{/* eslint-disable-next-line @next/next/no-img-element */}
+								<img
+									src={originalUpload}
+									alt="Your Photo"
+									style={{
+										position: 'absolute',
+										left: '50%',
+										top: '50%',
+										transform: `translate(calc(-50% + ${transform.offset.x}px), calc(-50% + ${transform.offset.y}px)) scale(${transform.scale})`,
+										transformOrigin: 'center center',
+										width: selectedFrame.id === 'frame-2' ? `${transform.containerW ?? transform.displayedW ?? 224}px` : transform.displayedW ? `${transform.displayedW}px` : 'auto',
+										height: selectedFrame.id === 'frame-2' ? `${transform.containerH ?? transform.displayedH ?? 288}px` : transform.displayedH ? `${transform.displayedH}px` : 'auto',
+										borderRadius: selectedFrame.id === 'frame-1' ? '50%' : undefined,
+										objectFit: selectedFrame.id === 'frame-1' || selectedFrame.id === 'frame-2' ? 'cover' : 'contain',
+										...(selectedFrame.id === 'frame-1' && {
+											maxWidth: '180px',
+											maxHeight: '180px',
+											aspectRatio: '1',
+										})
+									}}
+								/>
+							</div>
 						</div>
 					) : (
 						<div className="flex items-center justify-center w-full h-full bg-gray-100 rounded">
