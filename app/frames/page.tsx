@@ -213,9 +213,9 @@ export default function FramesPage() {
     ) {
         if (!uploadDataUrl) return null;
 
-        // canvas size — tune as needed for quality
-        const width = 1200;
-        const height = 1500;
+        // canvas size — reduced for Vercel compatibility
+        const width = 800;
+        const height = 1000;
         const canvas = document.createElement('canvas');
         canvas.width = width;
         canvas.height = height;
@@ -225,7 +225,6 @@ export default function FramesPage() {
         // load images
         const frameImg = await new Promise<HTMLImageElement>((res, rej) => {
             const i = new window.Image();
-            i.crossOrigin = 'anonymous';
             i.onload = () => res(i);
             i.onerror = rej;
             i.src = frameSrc;
@@ -233,7 +232,6 @@ export default function FramesPage() {
 
         const userImg = await new Promise<HTMLImageElement>((res, rej) => {
             const i = new window.Image();
-            i.crossOrigin = 'anonymous';
             i.onload = () => res(i);
             i.onerror = rej;
             i.src = uploadDataUrl;
@@ -255,35 +253,19 @@ export default function FramesPage() {
             const ix = centerX - dw / 2;
             const iy = centerY - dh / 2;
 
-                if (current.id === 'frame-1') {
-                // Apply perfect circular clipping for frame-1
+            if (current.id === 'frame-1') {
+                // Apply circular clipping for frame-1 using the user's adjusted position
                 ctx.save();
                 ctx.beginPath();
                 const circleX = width / 2;
                 const circleY = height / 2;
-                const circleRadius = Math.min(width, height) * 0.25; // Smaller radius for a more compact circle
+                const circleRadius = Math.min(width, height) * 0.25;
                 ctx.arc(circleX, circleY, circleRadius, 0, Math.PI * 2);
                 ctx.clip();
-                
-                // Calculate the square dimensions that will contain our circle
-                const squareSize = circleRadius * 2;
-                // Draw the image in a square to maintain aspect ratio
-                ctx.drawImage(userImg, 
-                    circleX - circleRadius, // x position
-                    circleY - circleRadius, // y position
-                    squareSize, // width
-                    squareSize  // height
-                );
+                ctx.drawImage(userImg, ix, iy, dw, dh);
                 ctx.restore();
-            } else if (current.id === 'frame-2') {
-                // For frame-2, preserve aspect ratio and fit the image within the canvas
-                const scale = Math.min(width / userImg.naturalWidth, height / userImg.naturalHeight);
-                const scaledWidth = userImg.naturalWidth * scale;
-                const scaledHeight = userImg.naturalHeight * scale;
-                const x = (width - scaledWidth) / 2;
-                const y = (height - scaledHeight) / 2;
-                ctx.drawImage(userImg, x, y, scaledWidth, scaledHeight);
             } else {
+                // For frame-2 and others, use the user's adjusted position
                 ctx.drawImage(userImg, ix, iy, dw, dh);
             }
         } else {

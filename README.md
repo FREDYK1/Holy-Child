@@ -1,36 +1,85 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Holy Child Custom Framing App
+
+A Next.js web application for creating custom framed photos for Holy Child College of Education's 80th Anniversary. Users can upload photos, select frames, adjust positioning, and download high-quality framed images.
+
+## Features
+
+- **Photo Upload**: Upload portrait photos (JPEG/PNG)
+- **Frame Selection**: Choose from Classic (circular) or Anniversary (rectangular) frames
+- **Interactive Preview**: Pan, zoom, and resize photos to fit frames perfectly
+- **High-Quality Output**: Generate 1200x1500 PNG composites
+- **Mobile Money Payment**: Collect payment details for processing
+- **Download Ready**: Instant download of framed photos
+
+## Tech Stack
+
+- **Framework**: Next.js 16 with App Router
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS
+- **Image Processing**: HTML5 Canvas API
+- **State Management**: localStorage for client-side persistence
+
+## Project Flow
+
+### 1. Home Page (`app/page.tsx`)
+- Displays Holy Child logo and promotional content
+- "Start Framing" button navigates to upload page
+
+### 2. Upload Photo (`app/uploadpic/page.tsx`)
+- User uploads a portrait photo
+- Photo stored as base64 in localStorage
+- "Select Frame" navigates to frame selection
+
+### 3. Select Frame (`app/frames/page.tsx`)
+- Choose between Classic or Anniversary frames
+- Preview modal with interactive image adjustment (pan/zoom/touch)
+- "Make Payment" generates composite and stores order data
+
+### 4. Payment (`app/payment/page.tsx`)
+- Order summary (GHC 20.00)
+- Collect user details: name, mobile money, network, email
+- Confirm payment navigates to confirmation
+
+### 5. Order Confirmation (`app/orderconfirmation/page.tsx`)
+- Display final framed photo
+- Download link for PNG composite image
 
 ## Getting Started
 
-First, run the development server:
+First, install dependencies:
+
+```bash
+npm install
+```
+
+Run the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) with your browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Build and Deploy
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Build for production:
 
-## Learn More
+```bash
+npm run build
+npm start
+```
 
-To learn more about Next.js, take a look at the following resources:
+Deploy on Vercel or any Node.js hosting platform.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Key Components
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- `InteractiveImage`: Custom component for photo manipulation
+- `Header`: Reusable navigation header with back button
+- `ButtonComponent`: Styled link button
 
-## Deploy on Vercel
+## Image Assets
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `/public/holychildlogo.png`: College logo
+- `/public/pic1.svg`: Classic frame design
+- `/public/pic2.svg`: Anniversary frame design
+- `/public/poster.svg`: Sample framed poster
