@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef } from 'react';
 import Header from '../components/Header';
 import Image from 'next/image';
+import html2canvas from 'html2canvas';
 
 const FRAMES = [
     { id: 'frame-1', title: 'Classic', src: '/pic1.svg' },
@@ -10,6 +11,8 @@ const FRAMES = [
 ];
 
 export default function OrderConfirmationPage() {
+	const captureRef = useRef<HTMLDivElement>(null);
+
 	const orderData = useMemo(() => {
 		try {
 			const data = localStorage.getItem('hc_order');
@@ -41,7 +44,7 @@ export default function OrderConfirmationPage() {
 			<main className="max-w-md mx-auto px-6 py-6 text-center">
 				<div className="w-full h-80 bg-gray-50 flex items-center justify-center mb-6">
 					{originalUpload && transform ? (
-						<div className="w-56 h-72 relative">
+						<div ref={captureRef} className="w-56 h-72 relative">
 							<div className="absolute inset-0 z-0 pointer-events-none">
 								<Image src={selectedFrame.src} alt={selectedFrame.title} fill style={{ objectFit: 'cover' }} />
 							</div>
@@ -83,15 +86,30 @@ export default function OrderConfirmationPage() {
 				</p>
 
 				<div className="mt-6 space-y-4">
-					{orderData?.compositeImage ? (
+					{originalUpload && transform ? (
 						<>
-							<a 
-								href={orderData.compositeImage} 
-								download="framed-photo.png" 
-								className="px-6 py-2 bg-[#7C3F33] text-white rounded-full inline-block hover:bg-[#6A352B] transition-colors"
+							<button
+								onClick={async () => {
+									if (!captureRef.current) return;
+									try {
+										const canvas = await html2canvas(captureRef.current, {
+											backgroundColor: null,
+											scale: 2, // Higher resolution
+											useCORS: true,
+										});
+										const link = document.createElement('a');
+										link.download = 'framed-photo.png';
+										link.href = canvas.toDataURL('image/png');
+										link.click();
+									} catch (error) {
+										console.error('Screenshot failed:', error);
+										alert('Failed to generate download. Please try again.');
+									}
+								}}
+								className="px-6 py-2 bg-[#7C3F33] text-white rounded-full hover:bg-[#6A352B] transition-colors"
 							>
 								Download Your Photo
-							</a>
+							</button>
 							<p className="text-xs text-gray-500">
 								Click the button above to save your framed photo to your device
 							</p>
