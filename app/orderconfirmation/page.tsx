@@ -2,7 +2,6 @@
 
 import React, { useMemo, useRef } from 'react';
 import Header from '../components/Header';
-import Image from 'next/image';
 import html2canvas from 'html2canvas';
 
 const FRAMES = [
@@ -44,12 +43,8 @@ export default function OrderConfirmationPage() {
 			<main className="max-w-md mx-auto px-6 py-6 text-center">
 				<div className="w-full h-80 bg-gray-50 flex items-center justify-center mb-6">
 					{originalUpload && transform ? (
-						<div ref={captureRef} className="w-56 h-72 relative">
-							<div className="absolute inset-0 z-0 pointer-events-none">
-								<Image src={selectedFrame.src} alt={selectedFrame.title} fill style={{ objectFit: 'cover' }} />
-							</div>
-
-							<div className="absolute inset-0 z-10 flex items-center justify-center">
+						<div ref={captureRef} className="w-56 h-72 relative" style={{ backgroundImage: `url(${selectedFrame.src})`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
+							<div className="absolute inset-0 flex items-center justify-center">
 								{/* eslint-disable-next-line @next/next/no-img-element */}
 								<img
 									src={originalUpload}
@@ -94,7 +89,7 @@ export default function OrderConfirmationPage() {
 									try {
 										const canvas = await html2canvas(captureRef.current, {
 											backgroundColor: null,
-											scale: 2, // Higher resolution
+											scale: 4, // Higher resolution
 											useCORS: true,
 										});
 										const link = document.createElement('a');
