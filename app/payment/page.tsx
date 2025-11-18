@@ -84,47 +84,25 @@ export default function PaymentPage() {
 
   async function handleConfirm(e: React.FormEvent) {
     e.preventDefault();
-    // generate composite and store
-    try {
-      // If the preview flow already generated a final composite, reuse it.
-      const existing = localStorage.getItem('hc_final');
-      if (existing) {
-        // ensure order contains compositeImage
-        try {
-          const raw = localStorage.getItem('hc_order');
-          if (raw) {
-            const parsed = JSON.parse(raw);
-            if (!parsed.compositeImage) {
-              parsed.compositeImage = existing;
-              localStorage.setItem('hc_order', JSON.stringify(parsed));
-            }
-          }
-        } catch {}
-      } else {
-        const frameId = order?.frameId || 'frame-1';
-        // Use the same frame assets as the frames page
-        const frame = frameId === 'frame-2' ? '/pic2.svg' : '/pic1.svg';
-  const upload = order?.originalUpload ?? order?.upload ?? null;
-  const transform = order?.transform ?? null;
-        const composite = await createComposite(frame, upload, transform);
-        if (composite) {
-          localStorage.setItem('hc_final', composite);
-          try {
-            const raw = localStorage.getItem('hc_order');
-            if (raw) {
-              const parsed = JSON.parse(raw);
-              parsed.compositeImage = composite;
-              localStorage.setItem('hc_order', JSON.stringify(parsed));
-            }
-          } catch {}
-        }
-      }
-    } catch {
-      // ignore
+    if (!email) {
+      alert('Please enter your email');
+      return;
     }
-
-    // navigate to confirmation
-    router.push('/orderconfirmation');
+    try {
+      const res = await fetch('/api/paystack/init', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json();
+      if (data.authorization_url) {
+        window.location.href = data.authorization_url;
+      } else {
+        alert('Error initializing payment: ' + data.error);
+      }
+    } catch (error) {
+      alert('Error: ' + (error instanceof Error ? error.message : String(error)));
+    }
   }
 
   return (
