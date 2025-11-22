@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useMemo, useRef, useEffect } from 'react';
+import React, { useMemo, useRef, useEffect, useState } from 'react';
 import Header from '../components/Header';
 import html2canvas from 'html2canvas';
 import { useSearchParams } from 'next/navigation';
+import emailjs from '@emailjs/browser';
 
 const FRAMES = [
     { id: 'frame-1', title: 'Classic', src: '/pic1.svg' },
@@ -72,10 +73,20 @@ async function createComposite(frameSrc: string, uploadData?: string | null, tra
 
 export default function OrderConfirmationPage() {
 	const captureRef = useRef<HTMLDivElement>(null);
+	const [emailSent, setEmailSent] = useState(false);
 
 	const orderData = useMemo(() => {
 		try {
 			const data = localStorage.getItem('hc_order');
+			return data ? JSON.parse(data) : null;
+		} catch {
+			return null;
+		}
+	}, []);
+
+	const customerData = useMemo(() => {
+		try {
+			const data = localStorage.getItem('hc_customer');
 			return data ? JSON.parse(data) : null;
 		} catch {
 			return null;
@@ -99,6 +110,33 @@ export default function OrderConfirmationPage() {
 
 	const searchParams = useSearchParams();
 	const reference = searchParams.get('reference');
+
+	const sendConfirmationEmail = async (customerEmail: string, customerName: string, orderReference: string) => {
+		try {
+			// Initialize EmailJS
+			emailjs.init('bkSCUAjvx_wObUDy2');
+
+			const templateParams = {
+				to_email: customerEmail,
+				to_name: customerName,
+				order_reference: orderReference,
+				frame_type: selectedFrame.title,
+				order_total: 'GHC 20.00',
+				message: 'Thank you for your order! Your custom framed photo has been processed successfully.'
+			};
+
+			await emailjs.send(
+				'service_ry3psxb',
+				'template_hqdxev9',
+				templateParams
+			);
+
+			setEmailSent(true);
+			console.log('Confirmation email sent successfully');
+		} catch (error) {
+			console.error('Failed to send confirmation email:', error);
+		}
+	};
 
 	useEffect(() => {
 		if (reference && orderData) {
@@ -141,6 +179,11 @@ export default function OrderConfirmationPage() {
 								} catch {}
 							}
 						}
+
+						// Send confirmation email
+						if (customerData?.email && customerData?.fullName && !emailSent) {
+							await sendConfirmationEmail(customerData.email, customerData.fullName, reference);
+						}
 					} catch (error) {
 						console.error('Error generating composite:', error);
 					}
@@ -154,7 +197,7 @@ export default function OrderConfirmationPage() {
 				alert('Error verifying payment.');
 			});
 		}
-	}, [reference, orderData]);
+	}, [reference, orderData, customerData, emailSent, selectedFrame.title]);
 
 	return (
 		<div className="min-h-screen bg-white">
@@ -199,6 +242,11 @@ export default function OrderConfirmationPage() {
 				<p className="mt-3 text-sm text-gray-600">
 					Your custom framed photo has been successfully processed and is now ready for download.
 				</p>
+				{emailSent && (
+					<p className="mt-2 text-sm text-green-600">
+						✓ Order confirmation email sent to {customerData?.email}
+					</p>
+				)}
 
 				<div className="mt-6 space-y-4">
 					{originalUpload && transform ? (

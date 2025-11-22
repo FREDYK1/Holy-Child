@@ -9,8 +9,6 @@ type Order = { frameId: string; upload?: string | null; originalUpload?: string 
 
 export default function PaymentPage() {
   const [fullName, setFullName] = useState('');
-  const [momo, setMomo] = useState('');
-  const [network, setNetwork] = useState('');
   const [email, setEmail] = useState('');
   const order = useMemo<Order>(() => {
     try {
@@ -84,10 +82,26 @@ export default function PaymentPage() {
 
   async function handleConfirm(e: React.FormEvent) {
     e.preventDefault();
+    if (!fullName) {
+      alert('Please enter your full name');
+      return;
+    }
     if (!email) {
       alert('Please enter your email');
       return;
     }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      alert('Please enter a valid email address');
+      return;
+    }
+
+    // Store customer data for email confirmation
+    localStorage.setItem('hc_customer', JSON.stringify({
+      fullName,
+      email
+    }));
+
     try {
       const res = await fetch('/api/paystack/init', {
         method: 'POST',
@@ -121,16 +135,21 @@ export default function PaymentPage() {
         <form onSubmit={handleConfirm} className="space-y-4">
           <div className="bg-gray-100 p-4 rounded">
             <label className="block text-sm">Full Name:</label>
-            <input value={fullName} onChange={(e) => setFullName(e.target.value)} className="w-full border rounded px-2 py-1 mt-1" />
-
-            <label className="block text-sm mt-3">Momo Number:</label>
-            <input value={momo} onChange={(e) => setMomo(e.target.value)} className="w-full border rounded px-2 py-1 mt-1" />
-
-            <label className="block text-sm mt-3">Network:</label>
-            <input value={network} onChange={(e) => setNetwork(e.target.value)} className="w-full border rounded px-2 py-1 mt-1" />
+            <input
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              className="w-full border rounded px-2 py-1 mt-1"
+              required
+            />
 
             <label className="block text-sm mt-3">Email:</label>
-            <input value={email} onChange={(e) => setEmail(e.target.value)} className="w-full border rounded px-2 py-1 mt-1" />
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full border rounded px-2 py-1 mt-1"
+              required
+            />
           </div>
 
           <div className="flex justify-center">
