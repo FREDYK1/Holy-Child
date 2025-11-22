@@ -11,19 +11,21 @@ const FRAMES = [
 ];
 
 const InteractiveImage = forwardRef(function InteractiveImage(
-    { src, width, height, isCircular, preserveAspectRatio, onChange }: { 
-        src: string; 
-        width: number; 
-        height: number; 
+    { src, width, height, isCircular, preserveAspectRatio, onChange, externalScale, onScaleChange }: {
+        src: string;
+        width: number;
+        height: number;
         isCircular?: boolean;
         preserveAspectRatio?: boolean;
-        onChange?: (s: { scale: number; offset: { x: number; y: number }; displayedW: number; displayedH: number; baseScale: number }) => void 
+        onChange?: (s: { scale: number; offset: { x: number; y: number }; displayedW: number; displayedH: number; baseScale: number }) => void;
+        externalScale?: number;
+        onScaleChange?: (scale: number) => void;
     },
     ref
 ) {
     const imgRef = useRef<HTMLImageElement | null>(null);
     const containerRef = useRef<HTMLDivElement | null>(null);
-    const [scale, setScale] = useState(1);
+    const [scale, setScale] = useState(externalScale || 1);
     const [offset, setOffset] = useState({ x: 0, y: 0 });
     const lastPointer = useRef<{ x: number; y: number } | null>(null);
     const lastDist = useRef<number | null>(null);
@@ -119,6 +121,7 @@ const InteractiveImage = forwardRef(function InteractiveImage(
 
             setScale(newScale);
             setOffset(newOffset);
+            if (onScaleChange) onScaleChange(newScale);
             if (onChange) onChange({ scale: newScale, offset: newOffset, displayedW: displayed.displayedW, displayedH: displayed.displayedH, baseScale: displayed.baseScale });
         }
     }
@@ -135,8 +138,17 @@ const InteractiveImage = forwardRef(function InteractiveImage(
     function handleWheel(e: React.WheelEvent) {
         e.preventDefault();
         const delta = -e.deltaY * 0.001;
-        setScale((s) => Math.max(0.2, Math.min(6, s + delta)));
+        const newScale = Math.max(0.2, Math.min(6, scale + delta));
+        setScale(newScale);
+        if (onScaleChange) onScaleChange(newScale);
     }
+
+    // Update scale when external scale changes
+    React.useEffect(() => {
+        if (externalScale !== undefined && externalScale !== scale) {
+            setScale(externalScale);
+        }
+    }, [externalScale]);
 
     useImperativeHandle(ref, () => ({ getState }));
 
@@ -192,6 +204,7 @@ type InteractiveHandle = {
 export default function FramesPage() {
     const [selected, setSelected] = useState<string | null>(null);
     const [showPreview, setShowPreview] = useState(false);
+    const [imageScale, setImageScale] = useState(1);
     const interactiveRef = useRef<InteractiveHandle | null>(null);
     const uploadData = useMemo(() => {
         try {
@@ -353,13 +366,15 @@ export default function FramesPage() {
 
                                         <div className="absolute inset-0 z-10 flex items-center justify-center">
                                             {/* interactive image allows pan/zoom/touch control */}
-                                            <InteractiveImage 
-                                                ref={interactiveRef} 
-                                                src={uploadData} 
+                                            <InteractiveImage
+                                                ref={interactiveRef}
+                                                src={uploadData}
                                                 width={current.id === 'frame-1' ? 200 : 200} // Adjusted width for circle
                                                 height={current.id === 'frame-1' ? 200 : 250} // Square dimensions for circle
                                                 isCircular={current.id === 'frame-1'}
                                                 preserveAspectRatio={false}
+                                                externalScale={imageScale}
+                                                onScaleChange={setImageScale}
                                             />
                                         </div>
                                     </>
@@ -368,6 +383,33 @@ export default function FramesPage() {
                                 )}
                             </div>
                         </div>
+                        
+                        {/* Scale Slider */}
+                        <div className="mb-4 px-4">
+                            <label className="block text-sm font-medium text-gray-700 mb-2 text-center">
+                                Adjust Photo Size
+                            </label>
+                            <div className="flex items-center gap-3">
+                                <span className="text-xs text-gray-500">Small</span>
+                                <input
+                                    type="range"
+                                    min="0.2"
+                                    max="6"
+                                    step="0.1"
+                                    value={imageScale}
+                                    onChange={(e) => setImageScale(parseFloat(e.target.value))}
+                                    className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+                                    style={{
+                                        background: `linear-gradient(to right, #7C3F33 0%, #7C3F33 ${((imageScale - 0.2) / (6 - 0.2)) * 100}%, #e5e7eb ${((imageScale - 0.2) / (6 - 0.2)) * 100}%, #e5e7eb 100%)`
+                                    }}
+                                />
+                                <span className="text-xs text-gray-500">Large</span>
+                            </div>
+                            <div className="text-center mt-1">
+                                <span className="text-xs text-gray-600">{Math.round(imageScale * 100)}%</span>
+                            </div>
+                        </div>
+
                         <div className="flex gap-3 justify-center">
                             <button
                                 onClick={async () => {
