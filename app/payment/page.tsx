@@ -202,6 +202,7 @@ export default function PaymentPage() {
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
               className="w-full border rounded px-2 py-1 mt-1"
+              placeholder="Enter your full name"
               required
             />
 
@@ -211,6 +212,7 @@ export default function PaymentPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full border rounded px-2 py-1 mt-1"
+              placeholder="Enter your email address"
               required
             />
           </div>
