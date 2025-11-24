@@ -203,7 +203,104 @@ export default function OrderConfirmationPage() {
 		<div className="min-h-screen bg-white">
 			<Header label="Order Confirmation" href="/" />
 
-			<main className="max-w-md mx-auto px-6 py-6 text-center">
+			{/* Desktop Layout */}
+			<div className="hidden lg:flex min-h-[calc(100vh-80px)]">
+				<div className="max-w-6xl mx-auto px-8 py-12 w-full">
+					<div className="grid grid-cols-2 gap-16 items-center">
+						{/* Left Side - Photo Preview */}
+						<div className="flex flex-col items-center">
+							<div className="w-full max-w-md h-96 bg-gray-50 flex items-center justify-center mb-8 rounded-lg">
+								{originalUpload && transform ? (
+									<div ref={captureRef} className="w-64 h-80 relative" style={{ backgroundImage: `url(${selectedFrame.src})`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
+										<div className="absolute inset-0 flex items-center justify-center">
+											{/* eslint-disable-next-line @next/next/no-img-element */}
+											<img
+												src={originalUpload}
+												alt="Your Photo"
+												style={{
+													position: 'absolute',
+													left: '50%',
+													top: '50%',
+													transform: `translate(calc(-50% + ${transform.offset.x}px), calc(-50% + ${transform.offset.y}px)) scale(${transform.scale})`,
+													transformOrigin: 'center center',
+													width: selectedFrame.id === 'frame-2' ? `${transform.containerW ?? transform.displayedW ?? 224}px` : transform.displayedW ? `${transform.displayedW}px` : 'auto',
+													height: selectedFrame.id === 'frame-2' ? `${transform.containerH ?? transform.displayedH ?? 288}px` : transform.displayedH ? `${transform.displayedH}px` : 'auto',
+													borderRadius: selectedFrame.id === 'frame-1' ? '50%' : undefined,
+													objectFit: selectedFrame.id === 'frame-1' || selectedFrame.id === 'frame-2' ? 'cover' : 'contain',
+													...(selectedFrame.id === 'frame-1' && {
+														maxWidth: '180px',
+														maxHeight: '180px',
+														aspectRatio: '1',
+													})
+												}}
+											/>
+										</div>
+									</div>
+								) : (
+									<div className="flex items-center justify-center w-full h-full bg-gray-100 rounded">
+										<p className="text-gray-500">Preview not available</p>
+									</div>
+								)}
+							</div>
+						</div>
+
+						{/* Right Side - Order Details */}
+						<div className="text-center lg:text-left">
+							<h1 className="text-4xl font-bold text-gray-900 mb-6">Thank You For Your Order!</h1>
+							<p className="text-lg text-gray-600 mb-6 leading-relaxed">
+								Your custom framed photo has been successfully processed and is now ready for download.
+							</p>
+							
+							{emailSent && (
+								<div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+									<p className="text-green-700 font-medium">
+										✓ Order confirmation email sent to {customerData?.email}
+									</p>
+								</div>
+							)}
+
+							<div className="space-y-4">
+								{originalUpload && transform ? (
+									<>
+										<button
+											onClick={async () => {
+												if (!captureRef.current) return;
+												try {
+													const canvas = await html2canvas(captureRef.current, {
+														backgroundColor: null,
+														scale: 4,
+														useCORS: true,
+													});
+													const link = document.createElement('a');
+													link.download = 'framed-photo.png';
+													link.href = canvas.toDataURL('image/png');
+													link.click();
+												} catch (error) {
+													console.error('Screenshot failed:', error);
+													alert('Failed to generate download. Please try again.');
+												}
+											}}
+											className="w-full lg:w-auto px-8 py-4 bg-[#7C3F33] text-white rounded-lg text-lg font-semibold hover:bg-[#6A352B] transition-colors"
+										>
+											Download Your Photo
+										</button>
+										<p className="text-sm text-gray-500">
+											Click the button above to save your framed photo to your device
+										</p>
+									</>
+								) : (
+									<div className="text-red-500 text-lg">
+										Unable to load your photo. Please try again from the previous step.
+									</div>
+								)}
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			{/* Mobile Layout */}
+			<main className="lg:hidden max-w-md mx-auto px-6 py-6 text-center">
 				<div className="w-full h-80 bg-gray-50 flex items-center justify-center mb-6">
 					{originalUpload && transform ? (
 						<div ref={captureRef} className="w-56 h-72 relative" style={{ backgroundImage: `url(${selectedFrame.src})`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
@@ -257,7 +354,7 @@ export default function OrderConfirmationPage() {
 									try {
 										const canvas = await html2canvas(captureRef.current, {
 											backgroundColor: null,
-											scale: 4, // Higher resolution
+											scale: 4,
 											useCORS: true,
 										});
 										const link = document.createElement('a');

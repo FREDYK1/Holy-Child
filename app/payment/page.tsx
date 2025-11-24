@@ -123,10 +123,73 @@ export default function PaymentPage() {
     <div className="min-h-screen bg-white">
       <Header label="Payment" href="/frames" />
 
-      <main className="max-w-md mx-auto px-6 py-6">
+      {/* Desktop Layout */}
+      <div className="hidden lg:flex min-h-[calc(100vh-80px)]">
+        <div className="max-w-6xl mx-auto px-8 py-12 w-full">
+          <div className="grid grid-cols-2 gap-16 items-start">
+            {/* Left Side - Order Summary */}
+            <div className="bg-gray-50 p-8 rounded-lg">
+              <h2 className="text-2xl font-semibold mb-6 text-gray-900">Order Summary</h2>
+              <div className="border-b border-gray-200 pb-4 mb-4">
+                <div className="flex justify-between items-center text-lg">
+                  <span className="text-gray-700">Framed Photo</span>
+                  <span className="font-semibold text-gray-900">GHC 20.00</span>
+                </div>
+              </div>
+              <div className="flex justify-between items-center text-xl font-semibold">
+                <span>Total</span>
+                <span>GHC 20.00</span>
+              </div>
+            </div>
+
+            {/* Right Side - Payment Form */}
+            <div className="bg-white">
+              <h2 className="text-2xl font-semibold mb-6 text-gray-900">Customer Information</h2>
+              <form onSubmit={handleConfirm} className="space-y-6">
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
+                    <input
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:ring-2 focus:ring-[#7C3F33] focus:border-transparent"
+                      placeholder="Enter your full name"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:ring-2 focus:ring-[#7C3F33] focus:border-transparent"
+                      placeholder="Enter your email address"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-6">
+                  <button
+                    type="submit"
+                    className="w-full bg-[#7C3F33] text-white py-4 rounded-lg text-lg font-semibold hover:bg-[#6A352B] transition-colors"
+                  >
+                    Confirm Payment
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile Layout */}
+      <main className="lg:hidden max-w-md mx-auto px-6 py-6">
         <div className="mb-6 bg-gray-100 p-4 rounded">
           <h3 className="font-semibold mb-2">Order Summary</h3>
-          <div className="flex justify-between">
+          <div className="flex justify-between border-t pt-2">
             <span>Framed Photo</span>
             <span>GHC 20.00</span>
           </div>

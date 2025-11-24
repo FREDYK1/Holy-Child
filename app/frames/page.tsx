@@ -309,7 +309,174 @@ export default function FramesPage() {
         <div className="min-h-screen bg-white">
             <Header label="Select Frame" href="/uploadpic" />
 
-            <main className="max-w-md mx-auto px-6 py-6">
+            {/* Desktop Layout */}
+            <div className="hidden lg:block min-h-[calc(100vh-80px)]">
+                <div className="max-w-7xl mx-auto px-8 py-12">
+                    <div className="grid grid-cols-2 gap-12 items-center">
+                        {/* Left Side - Frame Selection */}
+                        <div className="space-y-8">
+                            <div className="grid grid-cols-2 gap-6">
+                                {FRAMES.map((f) => (
+                                    <button
+                                        key={f.id}
+                                        onClick={() => setSelected(f.id)}
+                                        className={`p-6 bg-white border-2 ${selected === f.id ? 'border-[#7C3F33] shadow-lg' : 'border-gray-200'} rounded-lg hover:border-[#7C3F33] transition-all`}
+                                    >
+                                        <div className="w-full h-64 relative">
+                                            <Image src={f.src} alt={f.title} fill style={{ objectFit: 'contain' }} />
+                                        </div>
+                                        <p className="mt-4 text-lg font-medium text-gray-900">{f.title}</p>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Right Side - Preview Area */}
+                        <div className="flex flex-col items-center justify-center bg-gray-50 rounded-lg p-12 min-h-[600px]">
+                            {showPreview ? (
+                                <div className="w-full max-w-md">
+                                    <h3 className="text-center text-2xl font-semibold mb-8">Preview</h3>
+                                    <div className="w-full h-96 bg-white flex items-center justify-center mb-6 rounded-lg shadow-sm">
+                                        <div className="w-64 h-80 relative flex items-center justify-center">
+                                            {isGenerating ? (
+                                                <div className="text-lg text-gray-500">Generating preview...</div>
+                                            ) : uploadData ? (
+                                                <>
+                                                    <div className="absolute inset-0 z-0 pointer-events-none">
+                                                        <Image src={current.src} alt={current.title} fill style={{ objectFit: 'cover' }} />
+                                                    </div>
+
+                                                    <div className="absolute inset-0 z-10 flex items-center justify-center">
+                                                        <InteractiveImage
+                                                            ref={interactiveRef}
+                                                            src={uploadData}
+                                                            width={current.id === 'frame-1' ? 200 : 200}
+                                                            height={current.id === 'frame-1' ? 200 : 250}
+                                                            isCircular={current.id === 'frame-1'}
+                                                            preserveAspectRatio={false}
+                                                            externalScale={imageScale}
+                                                            onScaleChange={setImageScale}
+                                                        />
+                                                    </div>
+                                                </>
+                                            ) : (
+                                                <div className="text-lg text-gray-500">No preview available</div>
+                                            )}
+                                        </div>
+                                    </div>
+                                    
+                                    {/* Scale Slider */}
+                                    <div className="mb-6">
+                                        <label className="block text-sm font-medium text-gray-700 mb-2 text-center">
+                                            Adjust Photo Size
+                                        </label>
+                                        <div className="flex items-center gap-3">
+                                            <span className="text-xs text-gray-500">Small</span>
+                                            <input
+                                                type="range"
+                                                min="0.2"
+                                                max="6"
+                                                step="0.1"
+                                                value={imageScale}
+                                                onChange={(e) => setImageScale(parseFloat(e.target.value))}
+                                                className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+                                                style={{
+                                                    background: `linear-gradient(to right, #7C3F33 0%, #7C3F33 ${((imageScale - 0.2) / (6 - 0.2)) * 100}%, #e5e7eb ${((imageScale - 0.2) / (6 - 0.2)) * 100}%, #e5e7eb 100%)`
+                                                }}
+                                            />
+                                            <span className="text-xs text-gray-500">Large</span>
+                                        </div>
+                                        <div className="text-center mt-1">
+                                            <span className="text-xs text-gray-600">{Math.round(imageScale * 100)}%</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex gap-4 justify-center">
+                                        <button
+                                            onClick={async () => {
+                                                try {
+                                                    if (!interactiveRef.current?.getState) {
+                                                        alert('Unable to process image. Please try again.');
+                                                        return;
+                                                    }
+
+                                                    setIsGenerating(true);
+                                                    const state = interactiveRef.current.getState();
+                                                    const finalComposite = await createComposite(current.src, uploadData, state);
+                                                    
+                                                    if (!finalComposite) {
+                                                        alert('Failed to generate final image. Please try again.');
+                                                        setIsGenerating(false);
+                                                        return;
+                                                    }
+
+                                                    localStorage.setItem('hc_final', finalComposite);
+                                                    
+                                                    const orderDetails = {
+                                                        frameId: selected || current.id,
+                                                        compositeImage: finalComposite,
+                                                        originalUpload: uploadData,
+                                                        transform: state,
+                                                        timestamp: Date.now(),
+                                                        isProcessed: true
+                                                    };
+                                                    
+                                                    localStorage.setItem('hc_order', JSON.stringify(orderDetails));
+                                                    setIsGenerating(false);
+                                                    router.push('/payment');
+
+                                                } catch (err) {
+                                                    console.error('Error creating final image:', err);
+                                                    setIsGenerating(false);
+                                                    alert('An error occurred. Please try again. Error: ' + (err as Error).message);
+                                                }
+                                            }}
+                                            className="px-8 py-3 bg-[#7C3F33] text-white rounded-full text-lg font-medium hover:bg-[#6A352B] transition-colors"
+                                        >
+                                            Make Payment
+                                        </button>
+                                        <button
+                                            onClick={() => setShowPreview(false)}
+                                            className="px-6 py-3 border border-gray-300 rounded-full text-lg font-medium hover:bg-gray-50 transition-colors"
+                                        >
+                                            Close
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="text-center">
+                                    <div className="text-6xl text-gray-300 mb-4">📷</div>
+                                    <h3 className="text-2xl font-semibold text-gray-600 mb-2">Preview Your Frame</h3>
+                                    <p className="text-gray-500 mb-8">Select a frame and click preview to see how your photo will look</p>
+                                    <button
+                                        onClick={async () => {
+                                            if (!selected || !uploadData) return;
+                                            setPreviewSrc(null);
+                                            setIsGenerating(true);
+                                            setShowPreview(true);
+                                            try {
+                                                const src = await createComposite(current.src, uploadData);
+                                                if (src) setPreviewSrc(src);
+                                            } catch (err) {
+                                                console.error('createComposite failed', err);
+                                            } finally {
+                                                setIsGenerating(false);
+                                            }
+                                        }}
+                                        disabled={!selected || !uploadData}
+                                        className={`px-12 py-4 rounded-full text-lg font-medium ${selected && uploadData ? 'bg-[#7C3F33] text-white hover:bg-[#6A352B]' : 'bg-gray-300 text-gray-500 cursor-not-allowed'} transition-colors`}
+                                    >
+                                        Preview
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Mobile Layout */}
+            <main className="lg:hidden max-w-md mx-auto px-6 py-6">
                 <div className="flex flex-col items-center">
                     <div className="w-full">
                         {FRAMES.map((f) => (
@@ -350,8 +517,9 @@ export default function FramesPage() {
                 </div>
             </main>
 
+            {/* Mobile Preview Modal */}
             {showPreview && (
-                <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+                <div className="lg:hidden fixed inset-0 bg-black/40 flex items-center justify-center z-50">
                     <div className="bg-white rounded-lg p-6 w-80 shadow-xl">
                         <h3 className="text-center text-xl font-semibold mb-4">Preview</h3>
                         <div className="w-full h-80 bg-gray-50 flex items-center justify-center mb-4">
@@ -365,12 +533,11 @@ export default function FramesPage() {
                                         </div>
 
                                         <div className="absolute inset-0 z-10 flex items-center justify-center">
-                                            {/* interactive image allows pan/zoom/touch control */}
                                             <InteractiveImage
                                                 ref={interactiveRef}
                                                 src={uploadData}
-                                                width={current.id === 'frame-1' ? 200 : 200} // Adjusted width for circle
-                                                height={current.id === 'frame-1' ? 200 : 250} // Square dimensions for circle
+                                                width={current.id === 'frame-1' ? 200 : 200}
+                                                height={current.id === 'frame-1' ? 200 : 250}
                                                 isCircular={current.id === 'frame-1'}
                                                 preserveAspectRatio={false}
                                                 externalScale={imageScale}
@@ -414,7 +581,6 @@ export default function FramesPage() {
                             <button
                                 onClick={async () => {
                                     try {
-                                        // Always generate a new high-res composite with current positioning
                                         if (!interactiveRef.current?.getState) {
                                             alert('Unable to process image. Please try again.');
                                             return;
@@ -430,17 +596,15 @@ export default function FramesPage() {
                                             return;
                                         }
 
-                                        // Store the composite image for download
                                         localStorage.setItem('hc_final', finalComposite);
                                         
-                                        // Store complete order details
                                         const orderDetails = {
                                             frameId: selected || current.id,
-                                            compositeImage: finalComposite, // Store the actual composite
+                                            compositeImage: finalComposite,
                                             originalUpload: uploadData,
                                             transform: state,
                                             timestamp: Date.now(),
-                                            isProcessed: true // Flag to indicate this is a processed composite
+                                            isProcessed: true
                                         };
                                         
                                         localStorage.setItem('hc_order', JSON.stringify(orderDetails));
