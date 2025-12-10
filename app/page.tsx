@@ -10,7 +10,7 @@ export default function Home() {
         <div className="flex-1 flex items-center justify-center bg-white">
           <div className="max-w-lg text-center space-y-8 px-8">
             {/* Logo */}
-            <div>
+            <div className="flex justify-center m-3">
               <Image
                 src="/holychildlogo.png"
                 alt="Holy Child College logo"
