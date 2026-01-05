@@ -226,9 +226,9 @@ export default function FramesPage() {
     ) {
         if (!uploadDataUrl) return null;
 
-        // canvas size — further reduced for Vercel compatibility
-        const width = 600;
-        const height = 750;
+        // canvas size — further reduced for Vercel compatibility and to avoid localStorage quota issues
+        const width = 500;
+        const height = 625;
         const canvas = document.createElement('canvas');
         canvas.width = width;
         canvas.height = height;
@@ -302,7 +302,7 @@ export default function FramesPage() {
             ctx.drawImage(userImg, ix, iy, iw, ih);
         }
 
-        return canvas.toDataURL('image/png');
+        return canvas.toDataURL('image/png', 0.8);
     }
 
     return (
@@ -410,18 +410,33 @@ export default function FramesPage() {
                                                         return;
                                                     }
 
-                                                    localStorage.setItem('hc_final', finalComposite);
+                                                    // Try to store the composite image; if quota is exceeded, fall back to storing only metadata
+                                                    let storedComposite: string | null = null;
+                                                    try {
+                                                        localStorage.setItem('hc_final', finalComposite);
+                                                        storedComposite = finalComposite;
+                                                    } catch (storageErr) {
+                                                        console.warn('Failed to store hc_final in localStorage (likely quota exceeded). Proceeding without cached final image.', storageErr);
+                                                    }
                                                     
                                                     const orderDetails = {
                                                         frameId: selected || current.id,
-                                                        compositeImage: finalComposite,
+                                                        compositeImage: storedComposite,
                                                         originalUpload: uploadData,
                                                         transform: state,
                                                         timestamp: Date.now(),
                                                         isProcessed: true
                                                     };
                                                     
-                                                    localStorage.setItem('hc_order', JSON.stringify(orderDetails));
+                                                    try {
+                                                        localStorage.setItem('hc_order', JSON.stringify(orderDetails));
+                                                    } catch (orderErr) {
+                                                        console.error('Failed to store order details in localStorage:', orderErr);
+                                                        alert('Your browser storage is full. Please clear some space (e.g. site data) and try again.');
+                                                        setIsGenerating(false);
+                                                        return;
+                                                    }
+
                                                     setIsGenerating(false);
                                                     router.push('/payment');
 
@@ -596,18 +611,33 @@ export default function FramesPage() {
                                             return;
                                         }
 
-                                        localStorage.setItem('hc_final', finalComposite);
+                                        // Try to store the composite image; if quota is exceeded, fall back to storing only metadata
+                                        let storedComposite: string | null = null;
+                                        try {
+                                            localStorage.setItem('hc_final', finalComposite);
+                                            storedComposite = finalComposite;
+                                        } catch (storageErr) {
+                                            console.warn('Failed to store hc_final in localStorage (likely quota exceeded). Proceeding without cached final image.', storageErr);
+                                        }
                                         
                                         const orderDetails = {
                                             frameId: selected || current.id,
-                                            compositeImage: finalComposite,
+                                            compositeImage: storedComposite,
                                             originalUpload: uploadData,
                                             transform: state,
                                             timestamp: Date.now(),
                                             isProcessed: true
                                         };
                                         
-                                        localStorage.setItem('hc_order', JSON.stringify(orderDetails));
+                                        try {
+                                            localStorage.setItem('hc_order', JSON.stringify(orderDetails));
+                                        } catch (orderErr) {
+                                            console.error('Failed to store order details in localStorage:', orderErr);
+                                            alert('Your browser storage is full. Please clear some space (e.g. site data) and try again.');
+                                            setIsGenerating(false);
+                                            return;
+                                        }
+
                                         setIsGenerating(false);
                                         router.push('/payment');
 
