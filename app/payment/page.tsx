@@ -120,16 +120,16 @@ export default function PaymentPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="h-full flex flex-col overflow-hidden bg-white">
       <Header label="Payment" href="/frames" />
 
       {/* Desktop Layout */}
-      <div className="hidden lg:flex min-h-[calc(100vh-80px)]">
-        <div className="max-w-6xl mx-auto px-8 py-12 w-full">
-          <div className="grid grid-cols-2 gap-16 items-start">
+      <div className="hidden lg:flex flex-1 overflow-hidden">
+        <div className="max-w-5xl mx-auto px-8 py-8 w-full flex items-center">
+          <div className="grid grid-cols-2 gap-14 items-center w-full">
             {/* Left Side - Order Summary */}
-            <div className="bg-gray-50 p-8 rounded-lg">
-              <h2 className="text-2xl font-semibold mb-6 text-gray-900">Order Summary</h2>
+            <div className="bg-gray-50 p-7 rounded-lg">
+              <h2 className="text-2xl font-semibold mb-5 text-gray-900">Order Summary</h2>
               <div className="border-b border-gray-200 pb-4 mb-4">
                 <div className="flex justify-between items-center text-lg">
                   <span className="text-gray-700">Framed Photo</span>
@@ -144,8 +144,8 @@ export default function PaymentPage() {
 
             {/* Right Side - Payment Form */}
             <div className="bg-white">
-              <h2 className="text-2xl font-semibold mb-6 text-gray-900">Customer Information</h2>
-              <form onSubmit={handleConfirm} className="space-y-6">
+              <h2 className="text-2xl font-semibold mb-5 text-gray-900">Customer Information</h2>
+              <form onSubmit={handleConfirm} className="space-y-5">
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
@@ -171,10 +171,10 @@ export default function PaymentPage() {
                   </div>
                 </div>
 
-                <div className="pt-6">
+                <div className="pt-4">
                   <button
                     type="submit"
-                    className="w-full bg-[#7C3F33] text-white py-4 rounded-lg text-lg font-semibold hover:bg-[#6A352B] transition-colors"
+                    className="w-full bg-[#7C3F33] text-white py-3 rounded-lg text-lg font-semibold hover:bg-[#6A352B] transition-colors"
                   >
                     Confirm Payment
                   </button>
@@ -186,8 +186,8 @@ export default function PaymentPage() {
       </div>
 
       {/* Mobile Layout */}
-      <main className="lg:hidden max-w-md mx-auto px-6 py-6">
-        <div className="mb-6 bg-gray-100 p-4 rounded">
+      <main className="lg:hidden flex-1 flex flex-col overflow-hidden px-5 py-4">
+        <div className="mb-5 bg-gray-100 p-4 rounded">
           <h3 className="font-semibold mb-2">Order Summary</h3>
           <div className="flex justify-between border-t pt-2">
             <span>Framed Photo</span>
@@ -195,13 +195,13 @@ export default function PaymentPage() {
           </div>
         </div>
 
-        <form onSubmit={handleConfirm} className="space-y-4">
+        <form onSubmit={handleConfirm} className="flex-1 flex flex-col space-y-4">
           <div className="bg-gray-100 p-4 rounded">
             <label className="block text-sm">Full Name:</label>
             <input
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
-              className="w-full border rounded px-2 py-1 mt-1"
+              className="w-full border rounded px-3 py-2 mt-1"
               placeholder="Enter your full name"
               required
             />
@@ -211,14 +211,14 @@ export default function PaymentPage() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full border rounded px-2 py-1 mt-1"
+              className="w-full border rounded px-3 py-2 mt-1"
               placeholder="Enter your email address"
               required
             />
           </div>
 
-          <div className="flex justify-center">
-            <button className="px-6 py-2 bg-[#7C3F33] text-white rounded-full">Confirm Payment</button>
+          <div className="flex justify-center flex-shrink-0 mt-auto pb-2">
+            <button className="px-8 py-3 bg-[#7C3F33] text-white rounded-full">Confirm Payment</button>
           </div>
         </form>
       </main>

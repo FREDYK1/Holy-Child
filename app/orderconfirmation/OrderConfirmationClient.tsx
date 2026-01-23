@@ -200,18 +200,18 @@ export default function OrderConfirmationPage() {
 	}, [reference, orderData, customerData, emailSent, selectedFrame.title]);
 
 	return (
-		<div className="min-h-screen bg-white">
+		<div className="h-full flex flex-col overflow-hidden bg-white">
 			<Header label="Order Confirmation" href="/" />
 
 			{/* Desktop Layout */}
-			<div className="hidden lg:flex min-h-[calc(100vh-80px)]">
-				<div className="max-w-6xl mx-auto px-8 py-12 w-full">
-					<div className="grid grid-cols-2 gap-16 items-center">
+			<div className="hidden lg:flex flex-1 overflow-hidden">
+				<div className="max-w-5xl mx-auto px-8 py-6 w-full flex items-center">
+					<div className="grid grid-cols-2 gap-14 items-center w-full">
 						{/* Left Side - Photo Preview */}
 						<div className="flex flex-col items-center">
-							<div className="w-full max-w-md h-96 bg-gray-50 flex items-center justify-center mb-8 rounded-lg">
+							<div className="w-full max-w-md h-72 bg-gray-50 flex items-center justify-center mb-6 rounded-lg">
 								{originalUpload && transform ? (
-									<div ref={captureRef} className="w-64 h-80 relative" style={{ backgroundImage: `url(${selectedFrame.src})`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
+									<div ref={captureRef} className="w-56 h-68 relative" style={{ backgroundImage: `url(${selectedFrame.src})`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
 										<div className="absolute inset-0 flex items-center justify-center">
 											{/* eslint-disable-next-line @next/next/no-img-element */}
 											<img
@@ -246,13 +246,13 @@ export default function OrderConfirmationPage() {
 
 						{/* Right Side - Order Details */}
 						<div className="text-center lg:text-left">
-							<h1 className="text-4xl font-bold text-gray-900 mb-6">Thank You For Your Order!</h1>
-							<p className="text-lg text-gray-600 mb-6 leading-relaxed">
+							<h1 className="text-3xl font-bold text-gray-900 mb-5">Thank You For Your Order!</h1>
+							<p className="text-base text-gray-600 mb-5 leading-relaxed">
 								Your custom framed photo has been successfully processed and is now ready for download.
 							</p>
 							
 							{emailSent && (
-								<div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+								<div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-5">
 									<p className="text-green-700 font-medium">
 										✓ Order confirmation email sent to {customerData?.email}
 									</p>
@@ -280,12 +280,12 @@ export default function OrderConfirmationPage() {
 													alert('Failed to generate download. Please try again.');
 												}
 											}}
-											className="w-full lg:w-auto px-8 py-4 bg-[#7C3F33] text-white rounded-lg text-lg font-semibold hover:bg-[#6A352B] transition-colors"
+											className="w-full lg:w-auto px-7 py-3 bg-[#7C3F33] text-white rounded-lg text-lg font-semibold hover:bg-[#6A352B] transition-colors"
 										>
 											Download Your Photo
 										</button>
 										<p className="text-sm text-gray-500">
-											Click the button above to save your framed photo to your device
+											Click the button above to save your framed photo
 										</p>
 									</>
 								) : (
@@ -300,10 +300,10 @@ export default function OrderConfirmationPage() {
 			</div>
 
 			{/* Mobile Layout */}
-			<main className="lg:hidden max-w-md mx-auto px-6 py-6 text-center">
-				<div className="w-full h-80 bg-gray-50 flex items-center justify-center mb-6">
+			<main className="lg:hidden flex-1 flex flex-col overflow-hidden px-5 py-4 text-center">
+				<div className="w-full h-60 bg-gray-50 flex items-center justify-center mb-5 flex-shrink-0">
 					{originalUpload && transform ? (
-						<div ref={captureRef} className="w-56 h-72 relative" style={{ backgroundImage: `url(${selectedFrame.src})`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
+						<div ref={captureRef} className="w-48 h-56 relative" style={{ backgroundImage: `url(${selectedFrame.src})`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
 							<div className="absolute inset-0 flex items-center justify-center">
 								{/* eslint-disable-next-line @next/next/no-img-element */}
 								<img
@@ -320,8 +320,8 @@ export default function OrderConfirmationPage() {
 										borderRadius: selectedFrame.id === 'frame-1' ? '50%' : undefined,
 										objectFit: selectedFrame.id === 'frame-1' || selectedFrame.id === 'frame-2' ? 'cover' : 'contain',
 										...(selectedFrame.id === 'frame-1' && {
-											maxWidth: '180px',
-											maxHeight: '180px',
+											maxWidth: '150px',
+											maxHeight: '150px',
 											aspectRatio: '1',
 										})
 									}}
@@ -336,7 +336,7 @@ export default function OrderConfirmationPage() {
 				</div>
 
 				<h2 className="text-xl font-semibold">Thank You For Your Order!</h2>
-				<p className="mt-3 text-sm text-gray-600">
+				<p className="mt-2 text-sm text-gray-600">
 					Your custom framed photo has been successfully processed and is now ready for download.
 				</p>
 				{emailSent && (
@@ -345,7 +345,7 @@ export default function OrderConfirmationPage() {
 					</p>
 				)}
 
-				<div className="mt-6 space-y-4">
+				<div className="mt-5 space-y-4 flex-shrink-0">
 					{originalUpload && transform ? (
 						<>
 							<button
@@ -371,7 +371,7 @@ export default function OrderConfirmationPage() {
 								Download Your Photo
 							</button>
 							<p className="text-xs text-gray-500">
-								Click the button above to save your framed photo to your device
+								Click the button above to save your framed photo
 							</p>
 						</>
 					) : (

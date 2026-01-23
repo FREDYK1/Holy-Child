@@ -10,6 +10,148 @@ const FRAMES = [
     { id: 'frame-2', title: 'Anniversary', src: '/pic2.svg' },
 ];
 
+export type TransformState = {
+    scale: number;
+    offset: { x: number; y: number };
+    displayedW: number;
+    displayedH: number;
+    baseScale: number;
+    containerW: number;
+    containerH: number;
+};
+
+export type PersistOrderOptions = {
+    frameId: string;
+    finalComposite: string;
+    uploadData: string | null;
+    transform: TransformState;
+    alertFn?: (message: string) => void;
+};
+
+export async function createComposite(
+    frameSrc: string,
+    uploadDataUrl?: string | null,
+    transform?: TransformState,
+    options?: { isCircularFrame?: boolean }
+) {
+    if (!uploadDataUrl) return null;
+
+    const isCircularFrame = options?.isCircularFrame ?? false;
+
+    // canvas size — further reduced for Vercel compatibility and to avoid localStorage quota issues
+    const width = 500;
+    const height = 625;
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+
+    // load frame image using fetch for better compatibility
+    const frameResponse = await fetch(frameSrc);
+    if (!frameResponse.ok) {
+        throw new Error(`Failed to fetch frame: ${frameResponse.status}`);
+    }
+    const frameBlob = await frameResponse.blob();
+    const frameImg = await new Promise<HTMLImageElement>((res, rej) => {
+        const i = new window.Image();
+        i.onload = () => res(i);
+        i.onerror = (e) => {
+            console.error('Frame image load error:', e);
+            rej(e);
+        };
+        i.src = URL.createObjectURL(frameBlob);
+    });
+
+    const userImg = await new Promise<HTMLImageElement>((res, rej) => {
+        const i = new window.Image();
+        i.onload = () => res(i);
+        i.onerror = (e) => {
+            console.error('User image load error:', e);
+            rej(e);
+        };
+        i.src = uploadDataUrl;
+    });
+
+    // draw the frame first as the background layer
+    ctx.drawImage(frameImg, 0, 0, width, height);
+
+    // draw the uploaded image on top of the frame
+    if (transform && transform.containerW && transform.containerH) {
+        // use interactive transform to position/scale the photo
+        const { scale, offset, displayedW, displayedH, containerW, containerH } = transform;
+        const canvasScaleX = width / containerW;
+        const canvasScaleY = height / containerH;
+        const dw = displayedW * scale * canvasScaleX;
+        const dh = displayedH * scale * canvasScaleY;
+        const centerX = width / 2 + offset.x * canvasScaleX;
+        const centerY = height / 2 + offset.y * canvasScaleY;
+        const ix = centerX - dw / 2;
+        const iy = centerY - dh / 2;
+
+        if (isCircularFrame) {
+            // Apply circular clipping for frame-1 using the user's adjusted position
+            ctx.save();
+            ctx.beginPath();
+            const circleX = width / 2;
+            const circleY = height / 2;
+            const circleRadius = Math.min(width, height) * 0.25;
+            ctx.arc(circleX, circleY, circleRadius, 0, Math.PI * 2);
+            ctx.clip();
+            ctx.drawImage(userImg, ix, iy, dw, dh);
+            ctx.restore();
+        } else {
+            // For rectangular frames, use the user's adjusted position
+            ctx.drawImage(userImg, ix, iy, dw, dh);
+        }
+    } else {
+        // default: fill the canvas with the photo (cover sizing)
+        const ratio = Math.max(width / userImg.naturalWidth, height / userImg.naturalHeight);
+        const iw = userImg.naturalWidth * ratio;
+        const ih = userImg.naturalHeight * ratio;
+        const ix = (width - iw) / 2;
+        const iy = (height - ih) / 2;
+        ctx.drawImage(userImg, ix, iy, iw, ih);
+    }
+
+    return canvas.toDataURL('image/png', 0.8);
+}
+
+export function persistOrderDetails({ frameId, finalComposite, uploadData, transform, alertFn }: PersistOrderOptions): boolean {
+    let storedComposite: string | null = null;
+
+    if (finalComposite) {
+        // Try to store the composite image; if quota is exceeded, fall back to storing only metadata
+        try {
+            localStorage.setItem('hc_final', finalComposite);
+            storedComposite = finalComposite;
+        } catch (storageErr) {
+            console.warn('Failed to store hc_final in localStorage (likely quota exceeded). Proceeding without cached final image.', storageErr);
+        }
+    }
+
+    const orderDetails = {
+        frameId,
+        compositeImage: storedComposite,
+        originalUpload: uploadData,
+        transform,
+        timestamp: Date.now(),
+        isProcessed: true,
+    };
+
+    try {
+        localStorage.setItem('hc_order', JSON.stringify(orderDetails));
+    } catch (orderErr) {
+        console.error('Failed to store order details in localStorage:', orderErr);
+        if (alertFn) {
+            alertFn('Your browser storage is full. Please clear some space (e.g. site data) and try again.');
+        }
+        return false;
+    }
+
+    return true;
+}
+
 const InteractiveImage = forwardRef(function InteractiveImage(
     { src, width, height, isCircular, preserveAspectRatio, onChange, externalScale, onScaleChange }: {
         src: string;
@@ -198,7 +340,7 @@ const InteractiveImage = forwardRef(function InteractiveImage(
 });
 
 type InteractiveHandle = {
-    getState: () => { scale: number; offset: { x: number; y: number }; displayedW: number; displayedH: number; baseScale: number; containerW: number; containerH: number };
+    getState: () => TransformState;
 };
 
 export default function FramesPage() {
@@ -306,40 +448,40 @@ export default function FramesPage() {
     }
 
     return (
-        <div className="min-h-screen bg-white">
+        <div className="h-full flex flex-col overflow-hidden bg-white">
             <Header label="Select Frame" href="/uploadpic" />
 
             {/* Desktop Layout */}
-            <div className="hidden lg:block min-h-[calc(100vh-80px)]">
-                <div className="max-w-7xl mx-auto px-8 py-12">
-                    <div className="grid grid-cols-2 gap-12 items-center">
+            <div className="hidden lg:flex flex-1 overflow-hidden">
+                <div className="max-w-6xl mx-auto px-8 py-6 w-full">
+                    <div className="grid grid-cols-2 gap-10 items-center h-full">
                         {/* Left Side - Frame Selection */}
-                        <div className="space-y-8">
-                            <div className="grid grid-cols-2 gap-6">
+                        <div className="space-y-6">
+                            <div className="grid grid-cols-2 gap-5">
                                 {FRAMES.map((f) => (
                                     <button
                                         key={f.id}
                                         onClick={() => setSelected(f.id)}
-                                        className={`p-6 bg-white border-2 ${selected === f.id ? 'border-[#7C3F33] shadow-lg' : 'border-gray-200'} rounded-lg hover:border-[#7C3F33] transition-all`}
+                                        className={`p-5 bg-white border-2 ${selected === f.id ? 'border-[#7C3F33] shadow-lg' : 'border-gray-200'} rounded-lg hover:border-[#7C3F33] transition-all`}
                                     >
-                                        <div className="w-full h-64 relative">
+                                        <div className="w-full h-48 relative">
                                             <Image src={f.src} alt={f.title} fill style={{ objectFit: 'contain' }} />
                                         </div>
-                                        <p className="mt-4 text-lg font-medium text-gray-900">{f.title}</p>
+                                        <p className="mt-3 text-base font-medium text-gray-900">{f.title}</p>
                                     </button>
                                 ))}
                             </div>
                         </div>
 
                         {/* Right Side - Preview Area */}
-                        <div className="flex flex-col items-center justify-center bg-gray-50 rounded-lg p-12 min-h-[600px]">
+                        <div className="flex flex-col items-center justify-center bg-gray-50 rounded-lg p-8 h-full max-h-[calc(100vh-100px)]">
                             {showPreview ? (
                                 <div className="w-full max-w-md">
-                                    <h3 className="text-center text-2xl font-semibold mb-8">Preview</h3>
-                                    <div className="w-full h-96 bg-white flex items-center justify-center mb-6 rounded-lg shadow-sm">
-                                        <div className="w-64 h-80 relative flex items-center justify-center">
+                                    <h3 className="text-center text-xl font-semibold mb-6">Preview</h3>
+                                    <div className="w-full h-72 bg-white flex items-center justify-center mb-5 rounded-lg shadow-sm">
+                                        <div className="w-56 h-68 relative flex items-center justify-center">
                                             {isGenerating ? (
-                                                <div className="text-lg text-gray-500">Generating preview...</div>
+                                                <div className="text-base text-gray-500">Generating preview...</div>
                                             ) : uploadData ? (
                                                 <>
                                                     <div className="absolute inset-0 z-0 pointer-events-none">
@@ -350,8 +492,8 @@ export default function FramesPage() {
                                                         <InteractiveImage
                                                             ref={interactiveRef}
                                                             src={uploadData}
-                                                            width={current.id === 'frame-1' ? 200 : 200}
-                                                            height={current.id === 'frame-1' ? 200 : 250}
+                                                            width={current.id === 'frame-1' ? 180 : 180}
+                                                            height={current.id === 'frame-1' ? 180 : 220}
                                                             isCircular={current.id === 'frame-1'}
                                                             preserveAspectRatio={false}
                                                             externalScale={imageScale}
@@ -360,13 +502,13 @@ export default function FramesPage() {
                                                     </div>
                                                 </>
                                             ) : (
-                                                <div className="text-lg text-gray-500">No preview available</div>
+                                                <div className="text-base text-gray-500">No preview available</div>
                                             )}
                                         </div>
                                     </div>
                                     
                                     {/* Scale Slider */}
-                                    <div className="mb-6">
+                                    <div className="mb-5">
                                         <label className="block text-sm font-medium text-gray-700 mb-2 text-center">
                                             Adjust Photo Size
                                         </label>
@@ -385,9 +527,6 @@ export default function FramesPage() {
                                                 }}
                                             />
                                             <span className="text-xs text-gray-500">Large</span>
-                                        </div>
-                                        <div className="text-center mt-1">
-                                            <span className="text-xs text-gray-600">{Math.round(imageScale * 100)}%</span>
                                         </div>
                                     </div>
 
@@ -446,13 +585,13 @@ export default function FramesPage() {
                                                     alert('An error occurred. Please try again. Error: ' + (err as Error).message);
                                                 }
                                             }}
-                                            className="px-8 py-3 bg-[#7C3F33] text-white rounded-full text-lg font-medium hover:bg-[#6A352B] transition-colors"
+                                            className="px-6 py-2 bg-[#7C3F33] text-white rounded-full text-sm font-medium hover:bg-[#6A352B] transition-colors"
                                         >
                                             Make Payment
                                         </button>
                                         <button
                                             onClick={() => setShowPreview(false)}
-                                            className="px-6 py-3 border border-gray-300 rounded-full text-lg font-medium hover:bg-gray-50 transition-colors"
+                                            className="px-4 py-2 border border-gray-300 rounded-full text-sm font-medium hover:bg-gray-50 transition-colors"
                                         >
                                             Close
                                         </button>
@@ -460,9 +599,9 @@ export default function FramesPage() {
                                 </div>
                             ) : (
                                 <div className="text-center">
-                                    <div className="text-6xl text-gray-300 mb-4">📷</div>
-                                    <h3 className="text-2xl font-semibold text-gray-600 mb-2">Preview Your Frame</h3>
-                                    <p className="text-gray-500 mb-8">Select a frame and click preview to see how your photo will look</p>
+                                    <div className="text-4xl text-gray-300 mb-3">📷</div>
+                                    <h3 className="text-lg font-semibold text-gray-600 mb-2">Preview Your Frame</h3>
+                                    <p className="text-sm text-gray-500 mb-6">Select a frame and click preview to see how your photo will look</p>
                                     <button
                                         onClick={async () => {
                                             if (!selected || !uploadData) return;
@@ -479,7 +618,7 @@ export default function FramesPage() {
                                             }
                                         }}
                                         disabled={!selected || !uploadData}
-                                        className={`px-12 py-4 rounded-full text-lg font-medium ${selected && uploadData ? 'bg-[#7C3F33] text-white hover:bg-[#6A352B]' : 'bg-gray-300 text-gray-500 cursor-not-allowed'} transition-colors`}
+                                        className={`px-10 py-3 rounded-full text-lg font-medium ${selected && uploadData ? 'bg-[#7C3F33] text-white hover:bg-[#6A352B]' : 'bg-gray-300 text-gray-500 cursor-not-allowed'} transition-colors`}
                                     >
                                         Preview
                                     </button>
@@ -491,54 +630,52 @@ export default function FramesPage() {
             </div>
 
             {/* Mobile Layout */}
-            <main className="lg:hidden max-w-md mx-auto px-6 py-6">
-                <div className="flex flex-col items-center">
-                    <div className="w-full">
-                        {FRAMES.map((f) => (
-                            <button
-                                key={f.id}
-                                onClick={() => setSelected(f.id)}
-                                className={`w-full mb-6 flex items-center justify-center p-4 bg-white border ${selected === f.id ? 'border-[#7C3F33]' : 'border-gray-200'} rounded-sm shadow-sm`}
-                            >
-                                <div className="w-48 h-56 relative">
-                                    <Image src={f.src} alt={f.title} fill style={{ objectFit: 'cover' }} />
-                                </div>
-                            </button>
-                        ))}
-                    </div>
-
-                    <div className="mt-6 w-full flex justify-center">
+            <main className="lg:hidden flex-1 flex flex-col overflow-hidden px-5 py-4">
+                <div className="flex gap-4 overflow-x-auto pb-3 flex-shrink-0">
+                    {FRAMES.map((f) => (
                         <button
-                            onClick={async () => {
-                                if (!selected || !uploadData) return;
-                                setPreviewSrc(null);
-                                setIsGenerating(true);
-                                setShowPreview(true);
-                                try {
-                                    const src = await createComposite(current.src, uploadData);
-                                    if (src) setPreviewSrc(src);
-                                } catch (err) {
-                                    console.error('createComposite failed', err);
-                                } finally {
-                                    setIsGenerating(false);
-                                }
-                            }}
-                            disabled={!selected || !uploadData}
-                            className={`px-8 py-2 rounded-full text-white ${selected && uploadData ? 'bg-[#7C3F33]' : 'bg-gray-300 cursor-not-allowed'}`}
+                            key={f.id}
+                            onClick={() => setSelected(f.id)}
+                            className={`flex-shrink-0 w-32 p-3 bg-white border ${selected === f.id ? 'border-[#7C3F33]' : 'border-gray-200'} rounded-sm shadow-sm`}
                         >
-                            Preview
+                            <div className="w-full h-40 relative">
+                                <Image src={f.src} alt={f.title} fill style={{ objectFit: 'cover' }} />
+                            </div>
                         </button>
-                    </div>
+                    ))}
+                </div>
+
+                <div className="mt-4 flex justify-center flex-shrink-0">
+                    <button
+                        onClick={async () => {
+                            if (!selected || !uploadData) return;
+                            setPreviewSrc(null);
+                            setIsGenerating(true);
+                            setShowPreview(true);
+                            try {
+                                const src = await createComposite(current.src, uploadData);
+                                if (src) setPreviewSrc(src);
+                            } catch (err) {
+                                console.error('createComposite failed', err);
+                            } finally {
+                                setIsGenerating(false);
+                            }
+                        }}
+                        disabled={!selected || !uploadData}
+                        className={`px-8 py-2 rounded-full text-white ${selected && uploadData ? 'bg-[#7C3F33]' : 'bg-gray-300 cursor-not-allowed'}`}
+                    >
+                        Preview
+                    </button>
                 </div>
             </main>
 
             {/* Mobile Preview Modal */}
             {showPreview && (
-                <div className="lg:hidden fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-                    <div className="bg-white rounded-lg p-6 w-80 shadow-xl">
-                        <h3 className="text-center text-xl font-semibold mb-4">Preview</h3>
-                        <div className="w-full h-80 bg-gray-50 flex items-center justify-center mb-4">
-                            <div className="w-56 h-72 relative flex items-center justify-center">
+                <div className="lg:hidden fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-lg p-5 w-full max-w-sm shadow-xl max-h-[90vh] overflow-auto">
+                        <h3 className="text-center text-lg font-semibold mb-4">Preview</h3>
+                        <div className="w-full h-64 bg-gray-50 flex items-center justify-center mb-4">
+                            <div className="w-48 h-60 relative flex items-center justify-center">
                                 {isGenerating ? (
                                     <div className="text-sm text-gray-500">Generating preview...</div>
                                 ) : uploadData ? (
@@ -551,8 +688,8 @@ export default function FramesPage() {
                                             <InteractiveImage
                                                 ref={interactiveRef}
                                                 src={uploadData}
-                                                width={current.id === 'frame-1' ? 200 : 200}
-                                                height={current.id === 'frame-1' ? 200 : 250}
+                                                width={current.id === 'frame-1' ? 160 : 160}
+                                                height={current.id === 'frame-1' ? 160 : 200}
                                                 isCircular={current.id === 'frame-1'}
                                                 preserveAspectRatio={false}
                                                 externalScale={imageScale}
@@ -567,12 +704,12 @@ export default function FramesPage() {
                         </div>
                         
                         {/* Scale Slider */}
-                        <div className="mb-4 px-4">
+                        <div className="mb-4 px-2">
                             <label className="block text-sm font-medium text-gray-700 mb-2 text-center">
                                 Adjust Photo Size
                             </label>
                             <div className="flex items-center gap-3">
-                                <span className="text-xs text-gray-500">Small</span>
+                                <span className="text-xs text-gray-500">-</span>
                                 <input
                                     type="range"
                                     min="0.2"
@@ -585,10 +722,7 @@ export default function FramesPage() {
                                         background: `linear-gradient(to right, #7C3F33 0%, #7C3F33 ${((imageScale - 0.2) / (6 - 0.2)) * 100}%, #e5e7eb ${((imageScale - 0.2) / (6 - 0.2)) * 100}%, #e5e7eb 100%)`
                                     }}
                                 />
-                                <span className="text-xs text-gray-500">Large</span>
-                            </div>
-                            <div className="text-center mt-1">
-                                <span className="text-xs text-gray-600">{Math.round(imageScale * 100)}%</span>
+                                <span className="text-xs text-gray-500">+</span>
                             </div>
                         </div>
 
@@ -647,7 +781,7 @@ export default function FramesPage() {
                                         alert('An error occurred. Please try again. Error: ' + (err as Error).message);
                                     }
                                 }}
-                                className="px-6 py-2 bg-[#7C3F33] text-white rounded-full"
+                                className="px-5 py-2 bg-[#7C3F33] text-white rounded-full"
                             >
                                 Make Payment
                             </button>
