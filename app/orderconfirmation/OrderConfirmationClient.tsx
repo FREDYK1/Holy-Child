@@ -5,6 +5,7 @@ import Header from '../components/Header';
 import html2canvas from 'html2canvas';
 import { useSearchParams } from 'next/navigation';
 import emailjs from '@emailjs/browser';
+import Link from 'next/link';
 
 const FRAMES = [
     { id: 'frame-1', title: 'Classic', src: '/pic1.svg' },
@@ -74,6 +75,7 @@ async function createComposite(frameSrc: string, uploadData?: string | null, tra
 export default function OrderConfirmationPage() {
 	const captureRef = useRef<HTMLDivElement>(null);
 	const [emailSent, setEmailSent] = useState(false);
+	const [isDownloading, setIsDownloading] = useState(false);
 
 	const orderData = useMemo(() => {
 		try {
@@ -199,19 +201,48 @@ export default function OrderConfirmationPage() {
 		}
 	}, [reference, orderData, customerData, emailSent, selectedFrame.title]);
 
+	const handleDownload = async () => {
+		if (!captureRef.current) return;
+		setIsDownloading(true);
+		try {
+			const canvas = await html2canvas(captureRef.current, {
+				backgroundColor: null,
+				scale: 4,
+				useCORS: true,
+			});
+			const link = document.createElement('a');
+			link.download = 'holy-child-framed-photo.png';
+			link.href = canvas.toDataURL('image/png');
+			link.click();
+		} catch (error) {
+			console.error('Screenshot failed:', error);
+			alert('Failed to generate download. Please try again.');
+		} finally {
+			setIsDownloading(false);
+		}
+	};
+
 	return (
-		<div className="h-full flex flex-col overflow-hidden bg-white">
-			<Header label="Order Confirmation" href="/" />
+		<div className="h-full flex flex-col overflow-hidden bg-gradient-to-br from-[#fdf8f6] via-white to-[#fef5f2]">
+			<Header label="Order Complete" href="/" step={4} totalSteps={4} />
 
 			{/* Desktop Layout */}
 			<div className="hidden lg:flex flex-1 overflow-hidden">
-				<div className="max-w-5xl mx-auto px-8 py-6 w-full flex items-center">
+				<div className="max-w-5xl mx-auto px-8 py-8 w-full flex items-center">
 					<div className="grid grid-cols-2 gap-14 items-center w-full">
 						{/* Left Side - Photo Preview */}
 						<div className="flex flex-col items-center">
-							<div className="w-full max-w-md h-72 bg-gray-50 flex items-center justify-center mb-6 rounded-lg">
+							<div className="relative bg-white rounded-2xl p-6 shadow-xl">
+								{/* Decorative elements */}
+								<div className="absolute -top-4 -right-4 w-20 h-20 bg-[#7C3F33]/10 rounded-full blur-2xl" />
+								<div className="absolute -bottom-4 -left-4 w-16 h-16 bg-[#B86B5F]/10 rounded-full blur-2xl" />
+								
 								{originalUpload && transform ? (
-									<div ref={captureRef} className="w-56 h-68 relative" style={{ backgroundImage: `url(${selectedFrame.src})`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
+									<div 
+										ref={captureRef} 
+										className="w-64 h-80 relative rounded-lg overflow-hidden" 
+										style={{ backgroundImage: `url(${selectedFrame.src})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
+									>
 										<div className="absolute inset-0 flex items-center justify-center">
 											{/* eslint-disable-next-line @next/next/no-img-element */}
 											<img
@@ -237,60 +268,84 @@ export default function OrderConfirmationPage() {
 										</div>
 									</div>
 								) : (
-									<div className="flex items-center justify-center w-full h-full bg-gray-100 rounded">
-										<p className="text-gray-500">Preview not available</p>
+									<div className="w-64 h-80 bg-gray-100 rounded-lg flex items-center justify-center">
+										<p className="text-gray-400">Preview not available</p>
 									</div>
 								)}
 							</div>
 						</div>
 
 						{/* Right Side - Order Details */}
-						<div className="text-center lg:text-left">
-							<h1 className="text-3xl font-bold text-gray-900 mb-5">Thank You For Your Order!</h1>
-							<p className="text-base text-gray-600 mb-5 leading-relaxed">
-								Your custom framed photo has been successfully processed and is now ready for download.
-							</p>
+						<div className="space-y-6">
+							{/* Success Icon */}
+							<div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+								<svg className="w-8 h-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+								</svg>
+							</div>
+
+							<div>
+								<h1 className="text-3xl font-bold text-gray-900 mb-3" style={{ fontFamily: 'var(--font-serif)' }}>
+									Thank You For Your Order!
+								</h1>
+								<p className="text-gray-500 leading-relaxed">
+									Your custom framed photo has been successfully processed and is now ready for download.
+								</p>
+							</div>
 							
 							{emailSent && (
-								<div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-5">
-									<p className="text-green-700 font-medium">
-										✓ Order confirmation email sent to {customerData?.email}
-									</p>
+								<div className="flex items-center gap-3 p-4 bg-green-50 rounded-xl border border-green-100">
+									<div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center shrink-0">
+										<svg className="w-4 h-4 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+										</svg>
+									</div>
+									<div>
+										<p className="font-medium text-green-800">Confirmation email sent!</p>
+										<p className="text-sm text-green-600">{customerData?.email}</p>
+									</div>
 								</div>
 							)}
 
-							<div className="space-y-4">
+							{/* Action Buttons */}
+							<div className="space-y-3 pt-4">
 								{originalUpload && transform ? (
 									<>
 										<button
-											onClick={async () => {
-												if (!captureRef.current) return;
-												try {
-													const canvas = await html2canvas(captureRef.current, {
-														backgroundColor: null,
-														scale: 4,
-														useCORS: true,
-													});
-													const link = document.createElement('a');
-													link.download = 'framed-photo.png';
-													link.href = canvas.toDataURL('image/png');
-													link.click();
-												} catch (error) {
-													console.error('Screenshot failed:', error);
-													alert('Failed to generate download. Please try again.');
-												}
-											}}
-											className="w-full lg:w-auto px-7 py-3 bg-[#7C3F33] text-white rounded-lg text-lg font-semibold hover:bg-[#6A352B] transition-colors"
+											onClick={handleDownload}
+											disabled={isDownloading}
+											className="w-full py-4 bg-gradient-to-r from-[#7C3F33] to-[#6A352B] text-white rounded-xl text-lg font-semibold shadow-lg shadow-[#7C3F33]/30 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
 										>
-											Download Your Photo
+											{isDownloading ? (
+												<>
+													<div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+													Preparing Download...
+												</>
+											) : (
+												<>
+													<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+														<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+													</svg>
+													Download Your Photo
+												</>
+											)}
 										</button>
-										<p className="text-sm text-gray-500">
-											Click the button above to save your framed photo
-										</p>
+										<Link
+											href="/"
+											className="w-full py-3 border-2 border-gray-200 text-gray-600 rounded-xl font-medium hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
+										>
+											<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+												<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+											</svg>
+											Back to Home
+										</Link>
 									</>
 								) : (
-									<div className="text-red-500 text-lg">
-										Unable to load your photo. Please try again from the previous step.
+									<div className="p-4 bg-red-50 rounded-xl border border-red-100">
+										<p className="text-red-600">Unable to load your photo. Please try again from the beginning.</p>
+										<Link href="/" className="mt-3 inline-block text-red-700 font-medium underline">
+											Start Over
+										</Link>
 									</div>
 								)}
 							</div>
@@ -300,84 +355,110 @@ export default function OrderConfirmationPage() {
 			</div>
 
 			{/* Mobile Layout */}
-			<main className="lg:hidden flex-1 flex flex-col overflow-hidden px-5 py-4 text-center">
-				<div className="w-full h-60 bg-gray-50 flex items-center justify-center mb-5 flex-shrink-0">
-					{originalUpload && transform ? (
-						<div ref={captureRef} className="w-48 h-56 relative" style={{ backgroundImage: `url(${selectedFrame.src})`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
-							<div className="absolute inset-0 flex items-center justify-center">
-								{/* eslint-disable-next-line @next/next/no-img-element */}
-								<img
-									src={originalUpload}
-									alt="Your Photo"
-									style={{
-										position: 'absolute',
-										left: '50%',
-										top: '50%',
-										transform: `translate(calc(-50% + ${transform.offset.x}px), calc(-50% + ${transform.offset.y}px)) scale(${transform.scale})`,
-										transformOrigin: 'center center',
-										width: selectedFrame.id === 'frame-2' ? `${transform.containerW ?? transform.displayedW ?? 224}px` : transform.displayedW ? `${transform.displayedW}px` : 'auto',
-										height: selectedFrame.id === 'frame-2' ? `${transform.containerH ?? transform.displayedH ?? 288}px` : transform.displayedH ? `${transform.displayedH}px` : 'auto',
-										borderRadius: selectedFrame.id === 'frame-1' ? '50%' : undefined,
-										objectFit: selectedFrame.id === 'frame-1' || selectedFrame.id === 'frame-2' ? 'cover' : 'contain',
-										...(selectedFrame.id === 'frame-1' && {
-											maxWidth: '150px',
-											maxHeight: '150px',
-											aspectRatio: '1',
-										})
-									}}
-								/>
+			<main className="lg:hidden flex-1 flex flex-col overflow-hidden">
+				<div className="flex-1 overflow-y-auto px-5 py-6 text-center">
+					{/* Success Animation */}
+					<div className="w-16 h-16 mx-auto bg-green-100 rounded-full flex items-center justify-center mb-5 animate-in scale-in">
+						<svg className="w-8 h-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+						</svg>
+					</div>
+
+					<h2 className="text-2xl font-bold text-gray-900 mb-2" style={{ fontFamily: 'var(--font-serif)' }}>
+						Order Complete!
+					</h2>
+					<p className="text-gray-500 mb-6">
+						Your framed photo is ready for download
+					</p>
+
+					{/* Photo Preview */}
+					<div className="relative mx-auto w-fit mb-6">
+						<div className="absolute -inset-4 bg-gradient-to-br from-[#7C3F33]/20 to-[#B86B5F]/10 rounded-2xl blur-xl" />
+						{originalUpload && transform ? (
+							<div 
+								ref={captureRef} 
+								className="relative w-48 h-60 rounded-xl overflow-hidden shadow-lg" 
+								style={{ backgroundImage: `url(${selectedFrame.src})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
+							>
+								<div className="absolute inset-0 flex items-center justify-center">
+									{/* eslint-disable-next-line @next/next/no-img-element */}
+									<img
+										src={originalUpload}
+										alt="Your Photo"
+										style={{
+											position: 'absolute',
+											left: '50%',
+											top: '50%',
+											transform: `translate(calc(-50% + ${transform.offset.x}px), calc(-50% + ${transform.offset.y}px)) scale(${transform.scale})`,
+											transformOrigin: 'center center',
+											width: selectedFrame.id === 'frame-2' ? `${transform.containerW ?? transform.displayedW ?? 224}px` : transform.displayedW ? `${transform.displayedW}px` : 'auto',
+											height: selectedFrame.id === 'frame-2' ? `${transform.containerH ?? transform.displayedH ?? 288}px` : transform.displayedH ? `${transform.displayedH}px` : 'auto',
+											borderRadius: selectedFrame.id === 'frame-1' ? '50%' : undefined,
+											objectFit: selectedFrame.id === 'frame-1' || selectedFrame.id === 'frame-2' ? 'cover' : 'contain',
+											...(selectedFrame.id === 'frame-1' && {
+												maxWidth: '150px',
+												maxHeight: '150px',
+												aspectRatio: '1',
+											})
+										}}
+									/>
+								</div>
 							</div>
-						</div>
-					) : (
-						<div className="flex items-center justify-center w-full h-full bg-gray-100 rounded">
-							<p className="text-gray-500">Preview not available</p>
+						) : (
+							<div className="relative w-48 h-60 bg-gray-100 rounded-xl flex items-center justify-center">
+								<p className="text-gray-400 text-sm">Preview unavailable</p>
+							</div>
+						)}
+					</div>
+
+					{/* Email Confirmation */}
+					{emailSent && (
+						<div className="flex items-center justify-center gap-2 p-3 bg-green-50 rounded-xl mb-4 mx-auto max-w-xs">
+							<svg className="w-4 h-4 text-green-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+							</svg>
+							<p className="text-sm text-green-700">Email sent to {customerData?.email}</p>
 						</div>
 					)}
 				</div>
 
-				<h2 className="text-xl font-semibold">Thank You For Your Order!</h2>
-				<p className="mt-2 text-sm text-gray-600">
-					Your custom framed photo has been successfully processed and is now ready for download.
-				</p>
-				{emailSent && (
-					<p className="mt-2 text-sm text-green-600">
-						✓ Order confirmation email sent to {customerData?.email}
-					</p>
-				)}
-
-				<div className="mt-5 space-y-4 flex-shrink-0">
+				{/* Fixed Bottom Actions */}
+				<div className="shrink-0 px-5 py-4 bg-white border-t border-gray-100 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] space-y-3">
 					{originalUpload && transform ? (
 						<>
 							<button
-								onClick={async () => {
-									if (!captureRef.current) return;
-									try {
-										const canvas = await html2canvas(captureRef.current, {
-											backgroundColor: null,
-											scale: 4,
-											useCORS: true,
-										});
-										const link = document.createElement('a');
-										link.download = 'framed-photo.png';
-										link.href = canvas.toDataURL('image/png');
-										link.click();
-									} catch (error) {
-										console.error('Screenshot failed:', error);
-										alert('Failed to generate download. Please try again.');
-									}
-								}}
-								className="px-6 py-2 bg-[#7C3F33] text-white rounded-full hover:bg-[#6A352B] transition-colors"
+								onClick={handleDownload}
+								disabled={isDownloading}
+								className="w-full py-4 bg-gradient-to-r from-[#7C3F33] to-[#6A352B] text-white rounded-xl font-semibold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
 							>
-								Download Your Photo
+								{isDownloading ? (
+									<>
+										<div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+										Preparing...
+									</>
+								) : (
+									<>
+										<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+										</svg>
+										Download Photo
+									</>
+								)}
 							</button>
-							<p className="text-xs text-gray-500">
-								Click the button above to save your framed photo
-							</p>
+							<Link
+								href="/"
+								className="w-full py-3 border-2 border-gray-200 text-gray-600 rounded-xl font-medium flex items-center justify-center gap-2 active:bg-gray-50 transition-colors"
+							>
+								Back to Home
+							</Link>
 						</>
 					) : (
-						<div className="text-red-500">
-							Unable to load your photo. Please try again from the previous step.
-						</div>
+						<Link
+							href="/"
+							className="w-full py-4 bg-[#7C3F33] text-white rounded-xl font-semibold flex items-center justify-center"
+						>
+							Start Over
+						</Link>
 					)}
 				</div>
 			</main>

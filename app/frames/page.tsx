@@ -448,8 +448,8 @@ export default function FramesPage() {
     }
 
     return (
-        <div className="h-full flex flex-col overflow-hidden bg-linear-to-b from-gray-50 to-white">
-            <Header label="Select Frame" href="/uploadpic" />
+        <div className="h-full flex flex-col overflow-hidden bg-gradient-to-br from-[#fdf8f6] via-white to-[#fef5f2]">
+            <Header label="Select Frame" href="/uploadpic" step={2} totalSteps={4} />
 
             {/* Desktop Layout */}
             <div className="hidden lg:flex flex-1 overflow-hidden">
@@ -457,6 +457,10 @@ export default function FramesPage() {
                     <div className="grid grid-cols-2 gap-10 items-center h-full">
                         {/* Left Side - Frame Selection */}
                         <div className="space-y-6">
+                            <div>
+                                <h2 className="text-2xl font-bold text-gray-900 mb-2" style={{ fontFamily: 'var(--font-serif)' }}>Choose Your Frame</h2>
+                                <p className="text-gray-500">Select the perfect frame style for your photo</p>
+                            </div>
                             <div className="grid grid-cols-2 gap-5">
                                 {FRAMES.map((f) => (
                                     <button
