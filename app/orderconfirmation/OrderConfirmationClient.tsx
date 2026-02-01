@@ -108,6 +108,10 @@ export default function OrderConfirmationPage() {
 		return (orderData?.originalUpload as string) || null;
 	}, [orderData]);
 
+	const compositeImage = useMemo(() => {
+		return (orderData?.compositeImage as string) || null;
+	}, [orderData]);
+
 	const transform = useMemo(() => {
 		return (orderData?.transform as { scale: number; offset: { x: number; y: number }; displayedW: number; displayedH: number; baseScale: number; containerW?: number; containerH?: number }) || null;
 	}, [orderData]);
@@ -141,12 +145,12 @@ export default function OrderConfirmationPage() {
 			setEmailSent(true);
 			console.log('Confirmation email sent successfully');
 		} catch (error: unknown) {
-			// EmailJS errors can be objects with text/status properties
+			// EmailJS failures should not break the order flow; log a warning with as much detail as we can
 			const emailError = error as { text?: string; status?: number; message?: string };
-			console.error('Failed to send confirmation email:', {
+			console.warn('EmailJS: failed to send confirmation email', {
 				text: emailError?.text,
 				status: emailError?.status,
-				message: emailError?.message || String(error)
+				message: emailError?.message || String(error),
 			});
 		}
 	};
@@ -174,23 +178,6 @@ export default function OrderConfirmationPage() {
 									}
 								}
 							} catch {}
-						} else {
-							const frameId = orderData?.frameId || 'frame-1';
-							const frame = frameId === 'frame-2' ? '/pic2.svg' : '/pic1.svg';
-							const upload = (orderData?.originalUpload ?? orderData?.upload ?? null) as string | null;
-							const transformData = (orderData?.transform ?? null) as { scale: number; offset: { x: number; y: number }; displayedW: number; displayedH: number; baseScale: number; containerW?: number; containerH?: number } | null;
-							const composite = await createComposite(frame, upload, transformData);
-							if (composite) {
-								localStorage.setItem('hc_final', composite);
-								try {
-									const raw = localStorage.getItem('hc_order');
-									if (raw) {
-										const parsed = JSON.parse(raw);
-										parsed.compositeImage = composite;
-										localStorage.setItem('hc_order', JSON.stringify(parsed));
-									}
-								} catch {}
-							}
 						}
 
 						// Send confirmation email
@@ -213,9 +200,19 @@ export default function OrderConfirmationPage() {
 	}, [reference, orderData, customerData, emailSent, selectedFrame.title]);
 
 	const handleDownload = async () => {
-		if (!captureRef.current) return;
 		setIsDownloading(true);
 		try {
+			// Prefer the exact composite PNG generated on the frames page if available
+			if (compositeImage) {
+				const link = document.createElement('a');
+				link.download = 'holy-child-framed-photo.png';
+				link.href = compositeImage;
+				link.click();
+				return;
+			}
+
+			// Fallback: capture the DOM region if we don't have a stored composite
+			if (!captureRef.current) return;
 			const canvas = await html2canvas(captureRef.current, {
 				backgroundColor: null,
 				scale: 4,
@@ -255,35 +252,52 @@ export default function OrderConfirmationPage() {
 								<div className="absolute -top-4 -right-4 w-20 h-20 bg-[#7C3F33]/10 rounded-full blur-2xl" />
 								<div className="absolute -bottom-4 -left-4 w-16 h-16 bg-[#B86B5F]/10 rounded-full blur-2xl" />
 								
-								{originalUpload && transform ? (
+								{compositeImage || (originalUpload && transform) ? (
 									<div 
 										ref={captureRef} 
-										className="w-64 h-80 relative rounded-lg overflow-hidden" 
-										style={{ backgroundImage: `url(${selectedFrame.src})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
+className={`relative rounded-lg overflow-hidden max-w-full ${selectedFrame.id === 'frame-2' ? 'w-56' : 'w-80'}`}
+										style={compositeImage && transform ? undefined : {
+											width: `${transform?.containerW ?? 256}px`,
+											height: `${transform?.containerH ?? 320}px`,
+										}}
 									>
-										<div className="absolute inset-0 flex items-center justify-center">
-											{/* eslint-disable-next-line @next/next/no-img-element */}
+										{compositeImage ? (
+											/* Exact composite from frames page */
+											// eslint-disable-next-line @next/next/no-img-element
 											<img
-												src={originalUpload}
-												alt="Your Photo"
-												style={{
-													position: 'absolute',
-													left: '50%',
-													top: '50%',
-													transform: `translate(calc(-50% + ${transform.offset.x}px), calc(-50% + ${transform.offset.y}px)) scale(${transform.scale})`,
-													transformOrigin: 'center center',
-													width: selectedFrame.id === 'frame-2' ? `${transform.containerW ?? transform.displayedW ?? 224}px` : transform.displayedW ? `${transform.displayedW}px` : 'auto',
-													height: selectedFrame.id === 'frame-2' ? `${transform.containerH ?? transform.displayedH ?? 288}px` : transform.displayedH ? `${transform.displayedH}px` : 'auto',
-													borderRadius: selectedFrame.id === 'frame-1' ? '50%' : undefined,
-													objectFit: selectedFrame.id === 'frame-1' || selectedFrame.id === 'frame-2' ? 'cover' : 'contain',
-													...(selectedFrame.id === 'frame-1' && {
-														maxWidth: '180px',
-														maxHeight: '180px',
-														aspectRatio: '1',
-													})
-												}}
+												src={compositeImage}
+												alt="Framed Photo"
+												className="w-full h-auto object-contain"
 											/>
-										</div>
+										) : (
+											<div className="absolute inset-0 flex items-center justify-center" style={{
+												backgroundImage: `url(${selectedFrame.src})`,
+												backgroundSize: 'cover',
+												backgroundPosition: 'center',
+											}}>
+												{/* eslint-disable-next-line @next/next/no-img-element */}
+												<img
+													src={originalUpload as string}
+													alt="Your Photo"
+													style={{
+														position: 'absolute',
+														left: '50%',
+														top: '50%',
+														transform: `translate(calc(-50% + ${transform!.offset.x}px), calc(-50% + ${transform!.offset.y}px)) scale(${transform!.scale})`,
+														transformOrigin: 'center center',
+														width: `${transform!.containerW}px`,
+														height: `${transform!.containerH}px`,
+														borderRadius: selectedFrame.id === 'frame-1' ? '50%' : undefined,
+														objectFit: 'cover',
+														...(selectedFrame.id === 'frame-1' && {
+															maxWidth: '180px',
+															maxHeight: '180px',
+															aspectRatio: '1',
+														}),
+													}}
+												/>
+											</div>
+										)}
 									</div>
 								) : (
 									<div className="w-64 h-80 bg-gray-100 rounded-lg flex items-center justify-center">
@@ -392,35 +406,51 @@ export default function OrderConfirmationPage() {
 					{/* Photo Preview */}
 					<div className="relative mx-auto w-fit mb-6">
 						<div className="absolute -inset-4 bg-gradient-to-br from-[#7C3F33]/20 to-[#B86B5F]/10 rounded-2xl blur-xl" />
-						{originalUpload && transform ? (
+						{compositeImage || (originalUpload && transform) ? (
 							<div 
 								ref={captureRef} 
-								className="relative w-48 h-60 rounded-xl overflow-hidden shadow-lg" 
-								style={{ backgroundImage: `url(${selectedFrame.src})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
+								className={`relative rounded-xl overflow-hidden shadow-lg max-w-full ${selectedFrame.id === 'frame-2' ? 'w-56' : 'w-64'}`}
+								style={compositeImage && transform ? undefined : {
+									width: `${transform?.containerW ?? 192}px`,
+									height: `${transform?.containerH ?? 240}px`,
+								}}
 							>
-								<div className="absolute inset-0 flex items-center justify-center">
-									{/* eslint-disable-next-line @next/next/no-img-element */}
-									<img
-										src={originalUpload}
-										alt="Your Photo"
-										style={{
-											position: 'absolute',
-											left: '50%',
-											top: '50%',
-											transform: `translate(calc(-50% + ${transform.offset.x}px), calc(-50% + ${transform.offset.y}px)) scale(${transform.scale})`,
-											transformOrigin: 'center center',
-											width: selectedFrame.id === 'frame-2' ? `${transform.containerW ?? transform.displayedW ?? 224}px` : transform.displayedW ? `${transform.displayedW}px` : 'auto',
-											height: selectedFrame.id === 'frame-2' ? `${transform.containerH ?? transform.displayedH ?? 288}px` : transform.displayedH ? `${transform.displayedH}px` : 'auto',
-											borderRadius: selectedFrame.id === 'frame-1' ? '50%' : undefined,
-											objectFit: selectedFrame.id === 'frame-1' || selectedFrame.id === 'frame-2' ? 'cover' : 'contain',
-											...(selectedFrame.id === 'frame-1' && {
-												maxWidth: '150px',
-												maxHeight: '150px',
-												aspectRatio: '1',
-											})
-										}}
-									/>
-								</div>
+								{compositeImage ? (
+										// eslint-disable-next-line @next/next/no-img-element
+										<img
+											src={compositeImage}
+											alt="Framed Photo"
+											className="w-full h-auto object-contain"
+										/>
+									) : (
+										<div className="absolute inset-0 flex items-center justify-center" style={{
+											backgroundImage: `url(${selectedFrame.src})`,
+											backgroundSize: 'cover',
+											backgroundPosition: 'center',
+										}}>
+											{/* eslint-disable-next-line @next/next/no-img-element */}
+											<img
+												src={originalUpload as string}
+												alt="Your Photo"
+												style={{
+													position: 'absolute',
+													left: '50%',
+													top: '50%',
+													transform: `translate(calc(-50% + ${transform!.offset.x}px), calc(-50% + ${transform!.offset.y}px)) scale(${transform!.scale})`,
+													transformOrigin: 'center center',
+													width: `${transform!.containerW}px`,
+													height: `${transform!.containerH}px`,
+													borderRadius: selectedFrame.id === 'frame-1' ? '50%' : undefined,
+													objectFit: 'cover',
+													...(selectedFrame.id === 'frame-1' && {
+														maxWidth: '150px',
+														maxHeight: '150px',
+														aspectRatio: '1',
+													}),
+												}}
+											/>
+										</div>
+									)}
 							</div>
 						) : (
 							<div className="relative w-48 h-60 bg-gray-100 rounded-xl flex items-center justify-center">

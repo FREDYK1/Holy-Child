@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
         email,
         amount: 2000, // 20 GHS in pesewas
         currency: 'GHS',
-        callback_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/orderconfirmation`,
+        callback_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://https://holy-child-kappa.vercel.app'}/orderconfirmation`,
       }),
     });
 

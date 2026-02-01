@@ -4,6 +4,7 @@ import React, { useState, useMemo, useRef, useCallback, useImperativeHandle, for
 import Header from '../components/Header';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import html2canvas from 'html2canvas';
 
 const FRAMES = [
     { id: 'frame-1', title: 'Classic', src: '/pic1.svg' },
@@ -22,7 +23,7 @@ export type TransformState = {
 
 export type PersistOrderOptions = {
     frameId: string;
-    finalComposite: string;
+    finalComposite: string | null;
     uploadData: string | null;
     transform: TransformState;
     alertFn?: (message: string) => void;
@@ -348,6 +349,8 @@ export default function FramesPage() {
     const [showPreview, setShowPreview] = useState(false);
     const [imageScale, setImageScale] = useState(1);
     const interactiveRef = useRef<InteractiveHandle | null>(null);
+    const desktopCaptureRef = useRef<HTMLDivElement | null>(null);
+    const mobileCaptureRef = useRef<HTMLDivElement | null>(null);
     const uploadData = useMemo(() => {
         try {
             return localStorage.getItem('hc_upload');
@@ -360,92 +363,6 @@ export default function FramesPage() {
     const router = useRouter();
 
     const current = FRAMES.find((f) => f.id === selected) || FRAMES[0];
-
-    async function createComposite(
-        frameSrc: string,
-        uploadDataUrl?: string | null,
-        transform?: { scale: number; offset: { x: number; y: number }; displayedW: number; displayedH: number; baseScale: number; containerW: number; containerH: number }
-    ) {
-        if (!uploadDataUrl) return null;
-
-        // canvas size — further reduced for Vercel compatibility and to avoid localStorage quota issues
-        const width = 500;
-        const height = 625;
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return null;
-
-        // load frame image using fetch for better compatibility
-        const frameResponse = await fetch(frameSrc);
-        if (!frameResponse.ok) {
-            throw new Error(`Failed to fetch frame: ${frameResponse.status}`);
-        }
-        const frameBlob = await frameResponse.blob();
-        const frameImg = await new Promise<HTMLImageElement>((res, rej) => {
-            const i = new window.Image();
-            i.onload = () => res(i);
-            i.onerror = (e) => {
-                console.error('Frame image load error:', e);
-                rej(e);
-            };
-            i.src = URL.createObjectURL(frameBlob);
-        });
-
-        const userImg = await new Promise<HTMLImageElement>((res, rej) => {
-            const i = new window.Image();
-            i.onload = () => res(i);
-            i.onerror = (e) => {
-                console.error('User image load error:', e);
-                rej(e);
-            };
-            i.src = uploadDataUrl;
-        });
-
-        // draw the frame first as the background layer
-        ctx.drawImage(frameImg, 0, 0, width, height);
-
-        // draw the uploaded image on top of the frame
-        if (transform && transform.containerW && transform.containerH) {
-            // use interactive transform to position/scale the photo
-            const { scale, offset, displayedW, displayedH, containerW, containerH } = transform;
-            const canvasScaleX = width / containerW;
-            const canvasScaleY = height / containerH;
-            const dw = displayedW * scale * canvasScaleX;
-            const dh = displayedH * scale * canvasScaleY;
-            const centerX = width / 2 + offset.x * canvasScaleX;
-            const centerY = height / 2 + offset.y * canvasScaleY;
-            const ix = centerX - dw / 2;
-            const iy = centerY - dh / 2;
-
-            if (current.id === 'frame-1') {
-                // Apply circular clipping for frame-1 using the user's adjusted position
-                ctx.save();
-                ctx.beginPath();
-                const circleX = width / 2;
-                const circleY = height / 2;
-                const circleRadius = Math.min(width, height) * 0.25;
-                ctx.arc(circleX, circleY, circleRadius, 0, Math.PI * 2);
-                ctx.clip();
-                ctx.drawImage(userImg, ix, iy, dw, dh);
-                ctx.restore();
-            } else {
-                // For frame-2 and others, use the user's adjusted position
-                ctx.drawImage(userImg, ix, iy, dw, dh);
-            }
-        } else {
-            // default: fill the canvas with the photo (cover sizing)
-            const ratio = Math.max(width / userImg.naturalWidth, height / userImg.naturalHeight);
-            const iw = userImg.naturalWidth * ratio;
-            const ih = userImg.naturalHeight * ratio;
-            const ix = (width - iw) / 2;
-            const iy = (height - ih) / 2;
-            ctx.drawImage(userImg, ix, iy, iw, ih);
-        }
-
-        return canvas.toDataURL('image/png', 0.8);
-    }
 
     return (
         <div className="h-full flex flex-col overflow-hidden bg-gradient-to-br from-[#fdf8f6] via-white to-[#fef5f2]">
@@ -483,7 +400,7 @@ export default function FramesPage() {
                                 <div className="w-full max-w-md">
                                     <h3 className="text-center text-xl font-semibold mb-6">Preview</h3>
                                     <div className="w-full h-72 bg-white flex items-center justify-center mb-5 rounded-lg shadow-sm">
-                                        <div className="w-56 h-68 relative flex items-center justify-center">
+                                        <div ref={desktopCaptureRef} className="w-56 h-68 relative flex items-center justify-center">
                                             {isGenerating ? (
                                                 <div className="text-base text-gray-500">Generating preview...</div>
                                             ) : uploadData ? (
@@ -538,49 +455,39 @@ export default function FramesPage() {
                                         <button
                                             onClick={async () => {
                                                 try {
-                                                    if (!interactiveRef.current?.getState) {
+                                                if (!interactiveRef.current?.getState) {
                                                         alert('Unable to process image. Please try again.');
                                                         return;
                                                     }
 
-                                                    setIsGenerating(true);
+                                                    // Capture the current transform state immediately, before any async work
                                                     const state = interactiveRef.current.getState();
-                                                    const finalComposite = await createComposite(current.src, uploadData, state);
-                                                    
-                                                    if (!finalComposite) {
-                                                        alert('Failed to generate final image. Please try again.');
-                                                        setIsGenerating(false);
+
+                                                    const captureNode = desktopCaptureRef.current;
+                                                    if (!captureNode) {
+                                                        alert('Unable to capture preview. Please try again.');
                                                         return;
                                                     }
 
-                                                    // Try to store the composite image; if quota is exceeded, fall back to storing only metadata
-                                                    let storedComposite: string | null = null;
-                                                    try {
-                                                        localStorage.setItem('hc_final', finalComposite);
-                                                        storedComposite = finalComposite;
-                                                    } catch (storageErr) {
-                                                        console.warn('Failed to store hc_final in localStorage (likely quota exceeded). Proceeding without cached final image.', storageErr);
-                                                    }
-                                                    
-                                                    const orderDetails = {
+                                                    setIsGenerating(true);
+                                                    // Take an exact screenshot of the preview box as the final composite
+                                                    const canvas = await html2canvas(captureNode, {
+                                                        backgroundColor: null,
+                                                        scale: 2,
+                                                        useCORS: true,
+                                                    });
+                                                    const finalComposite = canvas.toDataURL('image/png');
+
+                                                    const ok = persistOrderDetails({
                                                         frameId: selected || current.id,
-                                                        compositeImage: storedComposite,
-                                                        originalUpload: uploadData,
+                                                        finalComposite,
+                                                        uploadData: uploadData || null,
                                                         transform: state,
-                                                        timestamp: Date.now(),
-                                                        isProcessed: true
-                                                    };
-                                                    
-                                                    try {
-                                                        localStorage.setItem('hc_order', JSON.stringify(orderDetails));
-                                                    } catch (orderErr) {
-                                                        console.error('Failed to store order details in localStorage:', orderErr);
-                                                        alert('Your browser storage is full. Please clear some space (e.g. site data) and try again.');
-                                                        setIsGenerating(false);
-                                                        return;
-                                                    }
+                                                        alertFn: alert,
+                                                    });
 
                                                     setIsGenerating(false);
+                                                    if (!ok) return;
                                                     router.push('/payment');
 
                                                 } catch (err) {
@@ -613,7 +520,9 @@ export default function FramesPage() {
                                             setIsGenerating(true);
                                             setShowPreview(true);
                                             try {
-                                                const src = await createComposite(current.src, uploadData);
+                                                const src = await createComposite(current.src, uploadData, undefined, {
+                                                    isCircularFrame: current.id === 'frame-1',
+                                                });
                                                 if (src) setPreviewSrc(src);
                                             } catch (err) {
                                                 console.error('createComposite failed', err);
@@ -679,7 +588,9 @@ export default function FramesPage() {
                                 setIsGenerating(true);
                                 setShowPreview(true);
                                 try {
-                                    const src = await createComposite(current.src, uploadData);
+                                    const src = await createComposite(current.src, uploadData, undefined, {
+                                        isCircularFrame: current.id === 'frame-1',
+                                    });
                                     if (src) setPreviewSrc(src);
                                 } catch (err) {
                                     console.error('createComposite failed', err);
@@ -791,7 +702,7 @@ export default function FramesPage() {
                         <div className="flex-1 overflow-y-auto px-5 py-4">
                             {/* Preview Container */}
                             <div className="w-full aspect-4/5 bg-linear-to-b from-gray-50 to-gray-100 rounded-xl flex items-center justify-center mb-5 relative overflow-hidden">
-                                <div className="w-[85%] h-[90%] relative flex items-center justify-center">
+                                <div ref={mobileCaptureRef} className="w-[85%] h-[90%] relative flex items-center justify-center">
                                     {isGenerating ? (
                                         <div className="flex flex-col items-center gap-3">
                                             <div className="w-8 h-8 border-3 border-[#7C3F33] border-t-transparent rounded-full animate-spin"></div>
@@ -886,44 +797,33 @@ export default function FramesPage() {
                                                 return;
                                             }
 
-                                            setIsGenerating(true);
+                                            // Capture the current transform state immediately, before any async work
                                             const state = interactiveRef.current.getState();
-                                            const finalComposite = await createComposite(current.src, uploadData, state);
-                                            
-                                            if (!finalComposite) {
-                                                alert('Failed to generate final image. Please try again.');
-                                                setIsGenerating(false);
+
+                                            const captureNode = mobileCaptureRef.current;
+                                            if (!captureNode) {
+                                                alert('Unable to capture preview. Please try again.');
                                                 return;
                                             }
 
-                                            // Try to store the composite image; if quota is exceeded, fall back to storing only metadata
-                                            let storedComposite: string | null = null;
-                                            try {
-                                                localStorage.setItem('hc_final', finalComposite);
-                                                storedComposite = finalComposite;
-                                            } catch (storageErr) {
-                                                console.warn('Failed to store hc_final in localStorage (likely quota exceeded). Proceeding without cached final image.', storageErr);
-                                            }
-                                            
-                                            const orderDetails = {
+                                            setIsGenerating(true);
+                                            const canvas = await html2canvas(captureNode, {
+                                                backgroundColor: null,
+                                                scale: 2,
+                                                useCORS: true,
+                                            });
+                                            const finalComposite = canvas.toDataURL('image/png');
+
+                                            const ok = persistOrderDetails({
                                                 frameId: selected || current.id,
-                                                compositeImage: storedComposite,
-                                                originalUpload: uploadData,
+                                                finalComposite,
+                                                uploadData: uploadData || null,
                                                 transform: state,
-                                                timestamp: Date.now(),
-                                                isProcessed: true
-                                            };
-                                            
-                                            try {
-                                                localStorage.setItem('hc_order', JSON.stringify(orderDetails));
-                                            } catch (orderErr) {
-                                                console.error('Failed to store order details in localStorage:', orderErr);
-                                                alert('Your browser storage is full. Please clear some space (e.g. site data) and try again.');
-                                                setIsGenerating(false);
-                                                return;
-                                            }
+                                                alertFn: alert,
+                                            });
 
                                             setIsGenerating(false);
+                                            if (!ok) return;
                                             router.push('/payment');
 
                                         } catch (err) {
