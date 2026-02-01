@@ -76,38 +76,40 @@ export default function OrderConfirmationPage() {
 	const captureRef = useRef<HTMLDivElement>(null);
 	const [emailSent, setEmailSent] = useState(false);
 	const [isDownloading, setIsDownloading] = useState(false);
+	const [isHydrated, setIsHydrated] = useState(false);
 
-	const orderData = useMemo(() => {
-		try {
-			const data = localStorage.getItem('hc_order');
-			return data ? JSON.parse(data) : null;
-		} catch {
-			return null;
-		}
-	}, []);
+	// Use state instead of useMemo to avoid hydration mismatch
+	// localStorage is only available on the client
+	const [orderData, setOrderData] = useState<Record<string, unknown> | null>(null);
+	const [customerData, setCustomerData] = useState<Record<string, unknown> | null>(null);
 
-	const customerData = useMemo(() => {
+	// Load data from localStorage after hydration
+	useEffect(() => {
 		try {
-			const data = localStorage.getItem('hc_customer');
-			return data ? JSON.parse(data) : null;
+			const orderRaw = localStorage.getItem('hc_order');
+			const customerRaw = localStorage.getItem('hc_customer');
+			setOrderData(orderRaw ? JSON.parse(orderRaw) : null);
+			setCustomerData(customerRaw ? JSON.parse(customerRaw) : null);
 		} catch {
-			return null;
+			setOrderData(null);
+			setCustomerData(null);
 		}
+		setIsHydrated(true);
 	}, []);
 
 	const selectedFrame = useMemo(() => {
 		if (orderData?.frameId) {
-			return FRAMES.find(f => f.id === orderData.frameId) || FRAMES[0];
+			return FRAMES.find(f => f.id === orderData.frameId as string) || FRAMES[0];
 		}
 		return FRAMES[0];
 	}, [orderData]);
 
 	const originalUpload = useMemo(() => {
-		return orderData?.originalUpload || null;
+		return (orderData?.originalUpload as string) || null;
 	}, [orderData]);
 
 	const transform = useMemo(() => {
-		return orderData?.transform || null;
+		return (orderData?.transform as { scale: number; offset: { x: number; y: number }; displayedW: number; displayedH: number; baseScale: number; containerW?: number; containerH?: number }) || null;
 	}, [orderData]);
 
 	const searchParams = useSearchParams();
@@ -127,16 +129,25 @@ export default function OrderConfirmationPage() {
 				message: 'Thank you for your order! Your custom framed photo has been processed successfully.'
 			};
 
-			await emailjs.send(
+			console.log('Sending email to:', customerEmail);
+			
+			const response = await emailjs.send(
 				'service_ry3psxb',
 				'template_hqdxev9',
 				templateParams
 			);
 
+			console.log('EmailJS response:', response);
 			setEmailSent(true);
 			console.log('Confirmation email sent successfully');
-		} catch (error) {
-			console.error('Failed to send confirmation email:', error);
+		} catch (error: unknown) {
+			// EmailJS errors can be objects with text/status properties
+			const emailError = error as { text?: string; status?: number; message?: string };
+			console.error('Failed to send confirmation email:', {
+				text: emailError?.text,
+				status: emailError?.status,
+				message: emailError?.message || String(error)
+			});
 		}
 	};
 
@@ -166,9 +177,9 @@ export default function OrderConfirmationPage() {
 						} else {
 							const frameId = orderData?.frameId || 'frame-1';
 							const frame = frameId === 'frame-2' ? '/pic2.svg' : '/pic1.svg';
-							const upload = orderData?.originalUpload ?? orderData?.upload ?? null;
-							const transform = orderData?.transform ?? null;
-							const composite = await createComposite(frame, upload, transform);
+							const upload = (orderData?.originalUpload ?? orderData?.upload ?? null) as string | null;
+							const transformData = (orderData?.transform ?? null) as { scale: number; offset: { x: number; y: number }; displayedW: number; displayedH: number; baseScale: number; containerW?: number; containerH?: number } | null;
+							const composite = await createComposite(frame, upload, transformData);
 							if (composite) {
 								localStorage.setItem('hc_final', composite);
 								try {
@@ -184,7 +195,7 @@ export default function OrderConfirmationPage() {
 
 						// Send confirmation email
 						if (customerData?.email && customerData?.fullName && !emailSent) {
-							await sendConfirmationEmail(customerData.email, customerData.fullName, reference);
+							await sendConfirmationEmail(customerData.email as string, customerData.fullName as string, reference);
 						}
 					} catch (error) {
 						console.error('Error generating composite:', error);
@@ -226,6 +237,13 @@ export default function OrderConfirmationPage() {
 		<div className="h-full flex flex-col overflow-hidden bg-gradient-to-br from-[#fdf8f6] via-white to-[#fef5f2]">
 			<Header label="Order Complete" href="/" step={4} totalSteps={4} />
 
+			{!isHydrated ? (
+				// Loading state - shows same structure on server and client until hydrated
+				<div className="flex-1 flex items-center justify-center">
+					<div className="w-8 h-8 border-2 border-[#7C3F33]/30 border-t-[#7C3F33] rounded-full animate-spin" />
+				</div>
+			) : (
+			<>
 			{/* Desktop Layout */}
 			<div className="hidden lg:flex flex-1 overflow-hidden">
 				<div className="max-w-5xl mx-auto px-8 py-8 w-full flex items-center">
@@ -302,7 +320,7 @@ export default function OrderConfirmationPage() {
 									</div>
 									<div>
 										<p className="font-medium text-green-800">Confirmation email sent!</p>
-										<p className="text-sm text-green-600">{customerData?.email}</p>
+										<p className="text-sm text-green-600">{customerData?.email as string}</p>
 									</div>
 								</div>
 							)}
@@ -417,7 +435,7 @@ export default function OrderConfirmationPage() {
 							<svg className="w-4 h-4 text-green-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
 							</svg>
-							<p className="text-sm text-green-700">Email sent to {customerData?.email}</p>
+							<p className="text-sm text-green-700">Email sent to {customerData?.email as string}</p>
 						</div>
 					)}
 				</div>
@@ -462,6 +480,8 @@ export default function OrderConfirmationPage() {
 					)}
 				</div>
 			</main>
+			</>
+			)}
 		</div>
 	);
 }
