@@ -84,6 +84,7 @@ export default function Home() {
             <div className="absolute bottom-20 right-20 w-48 h-48 border border-white/20 rounded-full" />
             <div className="absolute top-1/2 left-1/4 w-24 h-24 border border-white/20 rounded-full" />
           </div>
+          pass
           
           {/* Frame showcase */}
           <div className="relative z-10 animate-float">
