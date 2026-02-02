@@ -400,30 +400,55 @@ export default function FramesPage() {
                                 <div className="w-full max-w-md">
                                     <h3 className="text-center text-xl font-semibold mb-6">Preview</h3>
                                     <div className="w-full h-72 bg-white flex items-center justify-center mb-5 rounded-lg shadow-sm">
-                                        <div ref={desktopCaptureRef} className="w-56 h-68 relative flex items-center justify-center">
-                                            {isGenerating ? (
-                                                <div className="text-base text-gray-500">Generating preview...</div>
-                                            ) : uploadData ? (
-                                                <>
-                                                    <div className="absolute inset-0 z-0 pointer-events-none">
-                                                        <Image src={current.src} alt={current.title} fill style={{ objectFit: 'cover' }} />
-                                                    </div>
+                                        <div className="w-56 h-68 relative flex items-center justify-center">
+                                            {/* Inner capture region: frame + photo only (no watermark) */}
+                                            <div ref={desktopCaptureRef} className="w-full h-full relative flex items-center justify-center">
+                                                {isGenerating ? (
+                                                    <div className="text-base text-gray-500">Generating preview...</div>
+                                                ) : uploadData ? (
+                                                    <>
+                                                        <div className="absolute inset-0 z-0 pointer-events-none">
+                                                            <Image src={current.src} alt={current.title} fill style={{ objectFit: 'cover' }} />
+                                                        </div>
 
-                                                    <div className="absolute inset-0 z-10 flex items-center justify-center">
-                                                        <InteractiveImage
-                                                            ref={interactiveRef}
-                                                            src={uploadData}
-                                                            width={current.id === 'frame-1' ? 180 : 180}
-                                                            height={current.id === 'frame-1' ? 180 : 220}
-                                                            isCircular={current.id === 'frame-1'}
-                                                            preserveAspectRatio={false}
-                                                            externalScale={imageScale}
-                                                            onScaleChange={setImageScale}
-                                                        />
+                                                        <div className="absolute inset-0 z-10 flex items-center justify-center">
+                                                            <InteractiveImage
+                                                                ref={interactiveRef}
+                                                                src={uploadData}
+                                                                width={current.id === 'frame-1' ? 180 : 180}
+                                                                height={current.id === 'frame-1' ? 180 : 220}
+                                                                isCircular={current.id === 'frame-1'}
+                                                                preserveAspectRatio={false}
+                                                                externalScale={imageScale}
+                                                                onScaleChange={setImageScale}
+                                                            />
+                                                        </div>
+                                                    </>
+                                                ) : (
+                                                    <div className="text-base text-gray-500">No preview available</div>
+                                                )}
+                                            </div>
+
+                                            {/* Watermark overlay for preview only (not included in final composite) */}
+                                            {uploadData && !isGenerating && (
+                                                <>
+                                                    {/* Top label: Preview Only */}
+                                                    <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex justify-center pt-2">
+                                                        <div className="px-3 py-1.5 rounded-full bg-black/45 backdrop-blur-sm border border-white/40">
+                                                            <span className="text-[11px] font-semibold tracking-widest text-white uppercase text-center">
+                                                                Preview Only
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    {/* Bottom label: Final image after payment */}
+                                                    <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex justify-center pb-2">
+                                                        <div className="px-3 py-1.5 rounded-full bg-black/45 backdrop-blur-sm border border-white/40">
+                                                            <span className="text-[11px] font-medium tracking-wide text-white text-center">
+                                                                Final image available after payment
+                                                            </span>
+                                                        </div>
                                                     </div>
                                                 </>
-                                            ) : (
-                                                <div className="text-base text-gray-500">No preview available</div>
                                             )}
                                         </div>
                                     </div>
@@ -702,35 +727,60 @@ export default function FramesPage() {
                         <div className="flex-1 overflow-y-auto px-5 py-4">
                             {/* Preview Container */}
                             <div className="w-full aspect-4/5 bg-linear-to-b from-gray-50 to-gray-100 rounded-xl flex items-center justify-center mb-5 relative overflow-hidden">
-                                <div ref={mobileCaptureRef} className="w-[85%] h-[90%] relative flex items-center justify-center">
-                                    {isGenerating ? (
-                                        <div className="flex flex-col items-center gap-3">
-                                            <div className="w-8 h-8 border-3 border-[#7C3F33] border-t-transparent rounded-full animate-spin"></div>
-                                            <span className="text-sm text-gray-500">Loading preview...</span>
-                                        </div>
-                                    ) : uploadData ? (
-                                        <>
-                                            {/* Frame Overlay */}
-                                            <div className="absolute inset-0 z-0 pointer-events-none">
-                                                <Image src={current.src} alt={current.title} fill style={{ objectFit: 'contain' }} />
+                                <div className="w-[85%] h-[90%] relative flex items-center justify-center">
+                                    {/* Inner capture region: frame + photo only (no watermark) */}
+                                    <div ref={mobileCaptureRef} className="w-full h-full relative flex items-center justify-center">
+                                        {isGenerating ? (
+                                            <div className="flex flex-col items-center gap-3">
+                                                <div className="w-8 h-8 border-3 border-[#7C3F33] border-t-transparent rounded-full animate-spin"></div>
+                                                <span className="text-sm text-gray-500">Loading preview...</span>
                                             </div>
+                                        ) : uploadData ? (
+                                            <>
+                                                {/* Frame Overlay */}
+                                                <div className="absolute inset-0 z-0 pointer-events-none">
+                                                    <Image src={current.src} alt={current.title} fill style={{ objectFit: 'contain' }} />
+                                                </div>
 
-                                            {/* Interactive Image Layer */}
-                                            <div className="absolute inset-0 z-10 flex items-center justify-center">
-                                                <InteractiveImage
-                                                    ref={interactiveRef}
-                                                    src={uploadData}
-                                                    width={current.id === 'frame-1' ? 180 : 180}
-                                                    height={current.id === 'frame-1' ? 180 : 225}
-                                                    isCircular={current.id === 'frame-1'}
-                                                    preserveAspectRatio={false}
-                                                    externalScale={imageScale}
-                                                    onScaleChange={setImageScale}
-                                                />
+                                                {/* Interactive Image Layer */}
+                                                <div className="absolute inset-0 z-10 flex items-center justify-center">
+                                                    <InteractiveImage
+                                                        ref={interactiveRef}
+                                                        src={uploadData}
+                                                        width={current.id === 'frame-1' ? 180 : 180}
+                                                        height={current.id === 'frame-1' ? 180 : 225}
+                                                        isCircular={current.id === 'frame-1'}
+                                                        preserveAspectRatio={false}
+                                                        externalScale={imageScale}
+                                                        onScaleChange={setImageScale}
+                                                    />
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <div className="text-sm text-gray-500">No preview available</div>
+                                        )}
+                                    </div>
+
+                                    {/* Watermark overlay for preview only (not included in final composite) */}
+                                    {uploadData && !isGenerating && (
+                                        <>
+                                            {/* Top label: Preview Only */}
+                                            <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex justify-center pt-2">
+                                                <div className="px-3 py-1.5 rounded-full bg-black/45 backdrop-blur-sm border border-white/40">
+                                                    <span className="text-[10px] font-semibold tracking-widest text-white uppercase text-center">
+                                                        Preview Only
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            {/* Bottom label: Final image after payment */}
+                                            <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex justify-center pb-2">
+                                                <div className="px-3 py-1.5 rounded-full bg-black/45 backdrop-blur-sm border border-white/40">
+                                                    <span className="text-[10px] font-medium tracking-wide text-white text-center">
+                                                        Final image available after payment
+                                                    </span>
+                                                </div>
                                             </div>
                                         </>
-                                    ) : (
-                                        <div className="text-sm text-gray-500">No preview available</div>
                                     )}
                                 </div>
                             </div>
