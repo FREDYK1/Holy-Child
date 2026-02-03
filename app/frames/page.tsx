@@ -764,20 +764,48 @@ export default function FramesPage() {
                                     {/* Watermark overlay for preview only (not included in final composite) */}
                                     {uploadData && !isGenerating && (
                                         <>
-                                            {/* Top label: Preview Only */}
-                                            <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex justify-center pt-2">
-                                                <div className="px-3 py-1.5 rounded-full bg-black/45 backdrop-blur-sm border border-white/40">
-                                                    <span className="text-[10px] font-semibold tracking-widest text-white uppercase text-center">
+                                            {/* Top banner: Preview Only */}
+                                            <div
+                                                className={
+                                                    `pointer-events-none absolute top-16 z-20 flex px-4 ` +
+                                                    (current.id === 'frame-2'
+                                                        ? 'inset-x-6 justify-center'
+                                                        : 'inset-x-0 justify-center')
+                                                }
+                                            >
+                                                <div
+                                                    className={
+                                                        `bg-black/60 backdrop-blur-sm border border-white/40 rounded-xl px-4 py-3 text-center ` +
+                                                        (current.id === 'frame-2'
+                                                            ? 'w-full max-w-sm'
+                                                            : 'w-full max-w-xs')
+                                                    }
+                                                >
+                                                    <p className="text-[11px] sm:text-xs font-semibold tracking-[0.2em] text-white uppercase">
                                                         Preview Only
-                                                    </span>
+                                                    </p>
                                                 </div>
                                             </div>
-                                            {/* Bottom label: Final image after payment */}
-                                            <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex justify-center pb-2">
-                                                <div className="px-3 py-1.5 rounded-full bg-black/45 backdrop-blur-sm border border-white/40">
-                                                    <span className="text-[10px] font-medium tracking-wide text-white text-center">
-                                                        Final image available after payment
-                                                    </span>
+                                            {/* Bottom banner: Final image after payment */}
+                                            <div
+                                                className={
+                                                    `pointer-events-none absolute bottom-10 z-20 flex px-4 ` +
+                                                    (current.id === 'frame-2'
+                                                        ? 'inset-x-6 justify-center'
+                                                        : 'inset-x-0 justify-center')
+                                                }
+                                            >
+                                                <div
+                                                    className={
+                                                        `bg-black/60 backdrop-blur-sm border border-white/40 rounded-xl px-4 py-3 text-center ` +
+                                                        (current.id === 'frame-2'
+                                                            ? 'w-full max-w-sm'
+                                                            : 'w-full max-w-xs')
+                                                    }
+                                                >
+                                                    <p className="text-[11px] sm:text-xs font-medium text-gray-100 leading-snug">
+                                                        Final high‑quality image will be available only after payment.
+                                                    </p>
                                                 </div>
                                             </div>
                                         </>
